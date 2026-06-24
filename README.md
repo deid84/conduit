@@ -17,10 +17,9 @@ Runs in two modes:
 
 ```sh
 git clone https://github.com/your-handle/conduit
-cd conduit
-
-# Install frontend dependencies (one-time)
-npm --prefix frontend install
+cd conduit/frontend
+npm install
+cd ..
 ```
 
 ## Running
