@@ -24,6 +24,13 @@ impl std::fmt::Display for ConnectionId {
     }
 }
 
+impl std::str::FromStr for ConnectionId {
+    type Err = uuid::Error;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(Self(s.parse()?))
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ConnectionKind {
