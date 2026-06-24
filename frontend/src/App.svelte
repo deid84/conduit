@@ -1,57 +1,18 @@
-<script>
-  let status = $state('ready')
+<script lang="ts">
+  let status = $state<'ready' | 'connected' | 'error'>('ready')
 </script>
 
-<main>
-  <header>
-    <h1>Conduit</h1>
-    <span class="status">{status}</span>
+<div class="flex h-full flex-col">
+  <header class="flex items-center gap-3 border-b border-border px-4 py-2">
+    <h1 class="text-sm font-semibold tracking-widest text-foreground uppercase">
+      Conduit
+    </h1>
+    <span class="rounded-full border border-primary/40 px-2 py-0.5 text-[10px] text-primary">
+      {status}
+    </span>
   </header>
-  <p class="subtitle">Serial / TCP / UDP monitor</p>
-</main>
 
-<style>
-  :global(*, *::before, *::after) {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-  }
-
-  :global(body) {
-    font-family: system-ui, -apple-system, sans-serif;
-    background: #0f1117;
-    color: #e2e8f0;
-    height: 100vh;
-    overflow: hidden;
-  }
-
-  main {
-    padding: 1.5rem;
-  }
-
-  header {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    margin-bottom: 0.5rem;
-  }
-
-  h1 {
-    font-size: 1.1rem;
-    font-weight: 600;
-    letter-spacing: 0.05em;
-  }
-
-  .status {
-    font-size: 0.7rem;
-    color: #4ade80;
-    border: 1px solid #4ade80;
-    padding: 0.15rem 0.5rem;
-    border-radius: 999px;
-  }
-
-  .subtitle {
-    font-size: 0.85rem;
-    color: #64748b;
-  }
-</style>
+  <main class="flex-1 overflow-hidden p-4">
+    <p class="text-sm text-muted-foreground">Serial / TCP / UDP monitor</p>
+  </main>
+</div>
