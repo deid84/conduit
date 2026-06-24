@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { store } from '$lib/stores/connections.svelte'
+  import { store, disconnect } from '$lib/stores/connections.svelte'
   import { cn } from '$lib/utils'
 
   const STATUS_COLOR: Record<string, string> = {
@@ -28,8 +28,8 @@
         role="button"
         tabindex="0"
         class="ml-0.5 flex size-4 items-center justify-center rounded text-muted-foreground opacity-0 transition-opacity hover:bg-muted hover:text-foreground group-hover:opacity-100"
-        onclick={(e) => { e.stopPropagation(); store.remove(conn.id) }}
-        onkeydown={(e) => e.key === 'Enter' && (e.stopPropagation(), store.remove(conn.id))}
+        onclick={(e) => { e.stopPropagation(); disconnect(conn.id) }}
+        onkeydown={(e) => e.key === 'Enter' && (e.stopPropagation(), disconnect(conn.id))}
       >×</span>
     </button>
   {/each}

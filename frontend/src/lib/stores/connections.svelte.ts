@@ -1,3 +1,5 @@
+import { WS_BASE, openConnection, closeConnection } from '$lib/api'
+
 export type ConnectionStatus = 'idle' | 'connecting' | 'connected' | 'error' | 'disconnected'
 
 export interface SerialConfig {
@@ -48,6 +50,56 @@ function makeLabel(conn: ConnConfig): string {
   }
 }
 
+// WebSocket registry — kept outside reactive state so sockets survive tab switches.
+const _sockets = new Map<string, WebSocket>()
+
+function openStream(id: string) {
+  const ws = new WebSocket(`${WS_BASE}/api/connections/${id}/stream`)
+  ws.binaryType = 'arraybuffer'
+  ws.onmessage = (e) => {
+    if (e.data instanceof ArrayBuffer) {
+      store.appendLog(id, {
+        ts:        Date.now(),
+        direction: 'rx',
+        raw:       Array.from(new Uint8Array(e.data)),
+      })
+    } else {
+      try {
+        const msg = JSON.parse(e.data as string) as { type?: string }
+        if (msg.type === 'closed') store.setStatus(id, 'disconnected')
+      } catch { /* ignore non-JSON text frames */ }
+    }
+  }
+  ws.onclose = () => {
+    store.setStatus(id, 'disconnected')
+    _sockets.delete(id)
+  }
+  _sockets.set(id, ws)
+}
+
+export async function connect(config: ConnConfig): Promise<void> {
+  const { id } = await openConnection(config)
+  store.connections.push({
+    id,
+    label:   makeLabel(config),
+    status:  'connected',
+    conn:    config,
+    log:     [],
+    rxBytes: 0,
+    txBytes: 0,
+  })
+  store.activeId    = id
+  store.newConnOpen = false
+  openStream(id)
+}
+
+export async function disconnect(id: string): Promise<void> {
+  _sockets.get(id)?.close()
+  _sockets.delete(id)
+  await closeConnection(id).catch(() => {})
+  store.remove(id)
+}
+
 export const store = $state({
   connections: [] as Connection[],
   activeId:    null as string | null,
@@ -60,22 +112,6 @@ export const store = $state({
   openNew() {
     this.newConnOpen = true
     this.activeId = null
-  },
-
-  add(conn: ConnConfig): string {
-    const id = crypto.randomUUID()
-    this.connections.push({
-      id,
-      label:    makeLabel(conn),
-      status:   'idle',
-      conn,
-      log:      [],
-      rxBytes:  0,
-      txBytes:  0,
-    })
-    this.activeId    = id
-    this.newConnOpen = false
-    return id
   },
 
   remove(id: string) {

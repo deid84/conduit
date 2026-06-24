@@ -1,5 +1,6 @@
 <script lang="ts">
   import { store } from '$lib/stores/connections.svelte'
+  import { sendData } from '$lib/api'
   import { cn } from '$lib/utils'
 
   type Mode    = 'text' | 'hex'
@@ -9,19 +10,18 @@
   let lineEnd: LineEnd = $state('lf')
   let input:   string  = $state('')
 
-  function send() {
-    if (!input.trim()) return
-    // TODO: POST to /api/connections/{id}/send
-    store.appendLog(store.activeId!, {
-      ts:        Date.now(),
-      direction: 'tx',
-      raw:       Array.from(new TextEncoder().encode(input + { none: '', cr: '\r', lf: '\n', crlf: '\r\n' }[lineEnd])),
-    })
+  async function send() {
+    if (!input.trim() || !store.activeId) return
+    const suffix = { none: '', cr: '\r', lf: '\n', crlf: '\r\n' }[lineEnd]
+    const bytes  = new TextEncoder().encode(input + suffix)
+    const id     = store.activeId
     input = ''
+    store.appendLog(id, { ts: Date.now(), direction: 'tx', raw: Array.from(bytes) })
+    await sendData(id, bytes).catch(e => console.error('send failed:', e))
   }
 
   function onKeydown(e: KeyboardEvent) {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() }
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void send() }
   }
 
   const LINE_END_OPTS: { v: LineEnd; label: string }[] = [

@@ -1,6 +1,7 @@
 <script lang="ts">
-  import { store } from '$lib/stores/connections.svelte'
+  import { connect } from '$lib/stores/connections.svelte'
   import type { ConnConfig, SerialConfig, TcpConfig, UdpConfig } from '$lib/stores/connections.svelte'
+  import { listPorts } from '$lib/api'
   import { cn } from '$lib/utils'
 
   type Protocol = 'serial' | 'tcp' | 'udp'
@@ -18,16 +19,38 @@
   let tcp = $state<TcpConfig>({ host: '127.0.0.1', port: 3000 })
   let udp = $state<UdpConfig>({ bind: '0.0.0.0:0', remote: '127.0.0.1:5005' })
 
+  let ports   = $state<string[]>([])
+  let loading = $state(false)
+  let error   = $state<string | null>(null)
+
   const BAUD_RATES = [300, 1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200, 230400, 460800, 921600, 1000000, 2000000]
 
-  function connect() {
-    let config: ConnConfig
-    switch (proto) {
-      case 'serial': config = { type: 'serial', config: { ...serial } }; break
-      case 'tcp':    config = { type: 'tcp',    config: { ...tcp    } }; break
-      case 'udp':    config = { type: 'udp',    config: { ...udp    } }; break
+  async function fetchPorts() {
+    try {
+      const list = await listPorts()
+      ports = list.map(p => p.name)
+      if (ports.length > 0 && !serial.port) serial.port = ports[0]
+    } catch { /* backend not running yet */ }
+  }
+
+  $effect(() => { fetchPorts() })
+
+  async function doConnect() {
+    error = null
+    loading = true
+    try {
+      let config: ConnConfig
+      switch (proto) {
+        case 'serial': config = { type: 'serial', config: { ...serial } }; break
+        case 'tcp':    config = { type: 'tcp',    config: { ...tcp    } }; break
+        case 'udp':    config = { type: 'udp',    config: { ...udp    } }; break
+      }
+      await connect(config)
+    } catch (e) {
+      error = e instanceof Error ? e.message : String(e)
+    } finally {
+      loading = false
     }
-    store.add(config)
   }
 
   const PROTO_TABS: { id: Protocol; label: string }[] = [
@@ -36,9 +59,9 @@
     { id: 'udp',    label: 'UDP'    },
   ]
 
-  const INPUT_CLS = 'w-full rounded border border-border bg-muted/20 px-2 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/50 focus:border-primary/60 focus:outline-none'
+  const INPUT_CLS  = 'w-full rounded border border-border bg-muted/20 px-2 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/50 focus:border-primary/60 focus:outline-none'
   const SELECT_CLS = 'w-full rounded border border-border bg-muted/20 px-2 py-1.5 text-xs text-foreground focus:border-primary/60 focus:outline-none'
-  const LABEL_CLS = 'mb-1 block text-[11px] text-muted-foreground'
+  const LABEL_CLS  = 'mb-1 block text-[11px] text-muted-foreground'
 </script>
 
 <div class="flex flex-1 items-center justify-center overflow-hidden bg-background p-8">
@@ -67,12 +90,27 @@
         <div class="flex gap-2">
           <div class="flex-1">
             <label for="s-port" class={LABEL_CLS}>Port</label>
-            <input
-              id="s-port"
-              class={INPUT_CLS}
-              bind:value={serial.port}
-              placeholder="COM3 or /dev/ttyUSB0"
-            />
+            <div class="flex gap-1">
+              {#if ports.length > 0}
+                <select id="s-port" class={cn(SELECT_CLS, 'flex-1')} bind:value={serial.port}>
+                  {#each ports as p}
+                    <option value={p}>{p}</option>
+                  {/each}
+                </select>
+              {:else}
+                <input
+                  id="s-port"
+                  class={cn(INPUT_CLS, 'flex-1')}
+                  bind:value={serial.port}
+                  placeholder="COM3 or /dev/ttyUSB0"
+                />
+              {/if}
+              <button
+                class="rounded border border-border px-2 text-muted-foreground transition-colors hover:text-foreground"
+                title="Refresh ports"
+                onclick={fetchPorts}
+              >↺</button>
+            </div>
           </div>
           <div>
             <label for="s-baud" class={LABEL_CLS}>Baud Rate</label>
@@ -142,10 +180,14 @@
       </div>
     {/if}
 
+    {#if error}
+      <p class="mt-3 rounded border border-red-800/50 bg-red-950/30 px-3 py-2 text-[11px] text-red-400">{error}</p>
+    {/if}
+
     <button
       class="mt-6 w-full rounded bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground transition-opacity hover:opacity-90 active:opacity-75 disabled:cursor-not-allowed disabled:opacity-40"
-      disabled={proto === 'serial' && !serial.port.trim()}
-      onclick={connect}
-    >Connect</button>
+      disabled={loading || (proto === 'serial' && !serial.port.trim())}
+      onclick={doConnect}
+    >{loading ? 'Connecting…' : 'Connect'}</button>
   </div>
 </div>
