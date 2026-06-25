@@ -15,7 +15,9 @@
   {#if showNew || !store.active}
     <NewConnection />
   {:else}
-    <TerminalView connection={store.active} />
+    {#key store.activeId}
+      <TerminalView connection={store.active} />
+    {/key}
     <SendBar />
     <StatusBar connection={store.active} />
   {/if}
