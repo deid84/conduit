@@ -7,6 +7,7 @@ pub fn run() {
             // Bind on a random loopback port synchronously — this way we know
             // the port before constructing the WebView initialization script.
             let std_listener = std::net::TcpListener::bind("127.0.0.1:0")?;
+            std_listener.set_nonblocking(true)?;
             let port = std_listener.local_addr()?.port();
 
             tracing::info!("conduit API listening on 127.0.0.1:{port}");
