@@ -2,10 +2,61 @@
   import { Terminal } from '@xterm/xterm'
   import { FitAddon } from '@xterm/addon-fit'
   import { WebLinksAddon } from '@xterm/addon-web-links'
-  import type { IDisposable } from '@xterm/xterm'
+  import type { IDisposable, ITheme } from '@xterm/xterm'
   import type { Connection, LogEntry } from '$lib/stores/connections.svelte'
   import { sendData } from '$lib/api'
+  import { themeStore, effectiveTheme } from '$lib/stores/theme.svelte'
   import '@xterm/xterm/css/xterm.css'
+
+  // Catppuccin Latte (light)
+  const THEME_LATTE: ITheme = {
+    background:          '#eff1f5',
+    foreground:          '#4c4f69',
+    cursor:              '#dc8a78',
+    cursorAccent:        '#eff1f5',
+    selectionBackground: '#bcc0cc',
+    black:               '#5c5f77',
+    red:                 '#d20f39',
+    green:               '#40a02b',
+    yellow:              '#df8e1d',
+    blue:                '#1e66f5',
+    magenta:             '#ea76cb',
+    cyan:                '#179299',
+    white:               '#acb0be',
+    brightBlack:         '#6c6f85',
+    brightRed:           '#d20f39',
+    brightGreen:         '#40a02b',
+    brightYellow:        '#df8e1d',
+    brightBlue:          '#1e66f5',
+    brightMagenta:       '#ea76cb',
+    brightCyan:          '#179299',
+    brightWhite:         '#bcc0cc',
+  }
+
+  // Catppuccin Mocha (dark)
+  const THEME_MOCHA: ITheme = {
+    background:          '#1e1e2e',
+    foreground:          '#cdd6f4',
+    cursor:              '#f5e0dc',
+    cursorAccent:        '#1e1e2e',
+    selectionBackground: '#45475a',
+    black:               '#45475a',
+    red:                 '#f38ba8',
+    green:               '#a6e3a1',
+    yellow:              '#f9e2af',
+    blue:                '#89b4fa',
+    magenta:             '#f5c2e7',
+    cyan:                '#89dceb',
+    white:               '#bac2de',
+    brightBlack:         '#585b70',
+    brightRed:           '#f38ba8',
+    brightGreen:         '#a6e3a1',
+    brightYellow:        '#f9e2af',
+    brightBlue:          '#89b4fa',
+    brightMagenta:       '#f5c2e7',
+    brightCyan:          '#89dceb',
+    brightWhite:         '#a6adc8',
+  }
 
   let { connection }: { connection: Connection } = $props()
 
@@ -25,37 +76,15 @@
     if (!container) return
 
     const t = new Terminal({
-      cursorBlink:   true,
-      cursorStyle:   'bar',
-      disableStdin:  true,  // enabled only in raw mode (Effect 3)
-      fontFamily:   '"Cascadia Code", "Fira Code", "JetBrains Mono", monospace',
+      cursorBlink:  true,
+      cursorStyle:  'bar',
+      disableStdin: true,
+      fontFamily:   "'JetBrains Mono', 'Cascadia Code', 'Fira Code', monospace",
       fontSize:     12,
       lineHeight:   1.4,
       convertEol:   true,
       scrollback:   10_000,
-      theme: {
-        background:          '#09090b',
-        foreground:          '#e4e4e7',
-        cursor:              '#a1a1aa',
-        cursorAccent:        '#09090b',
-        selectionBackground: '#3f3f46',
-        black:               '#18181b',
-        red:                 '#f87171',
-        green:               '#4ade80',
-        yellow:              '#fbbf24',
-        blue:                '#60a5fa',
-        magenta:             '#c084fc',
-        cyan:                '#22d3ee',
-        white:               '#e4e4e7',
-        brightBlack:         '#52525b',
-        brightRed:           '#fca5a5',
-        brightGreen:         '#86efac',
-        brightYellow:        '#fde68a',
-        brightBlue:          '#93c5fd',
-        brightMagenta:       '#d8b4fe',
-        brightCyan:          '#67e8f9',
-        brightWhite:         '#f4f4f5',
-      },
+      theme:        effectiveTheme() === 'dark' ? THEME_MOCHA : THEME_LATTE,
     })
 
     const fitAddon  = new FitAddon()
@@ -109,6 +138,20 @@
 
     return () => { listener?.dispose() }
   })
+
+  // Effect 4: sync xterm theme when user changes light/dark/system preference.
+  const xtermTheme = $derived(effectiveTheme() === 'dark' ? THEME_MOCHA : THEME_LATTE)
+
+  $effect(() => {
+    const theme = xtermTheme  // tracked via $derived
+    const t     = term
+    if (!t) return
+    t.options.theme = theme
+  })
 </script>
 
-<div bind:this={container} class="flex-1 overflow-hidden bg-[#09090b]"></div>
+<div
+  bind:this={container}
+  class="flex-1 overflow-hidden"
+  style="background-color: {xtermTheme.background}"
+></div>

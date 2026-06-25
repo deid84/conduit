@@ -1,5 +1,6 @@
 <script lang="ts">
   import { store, disconnect } from '$lib/stores/connections.svelte'
+  import ThemeToggle from './ThemeToggle.svelte'
   import { cn } from '$lib/utils'
 
   const STATUS_COLOR: Record<string, string> = {
@@ -68,4 +69,9 @@
     title="New connection"
     onclick={() => store.openNew()}
   >+</button>
+
+  <!-- push theme toggle to the right -->
+  <div class="ml-auto flex items-center px-2">
+    <ThemeToggle />
+  </div>
 </div>
