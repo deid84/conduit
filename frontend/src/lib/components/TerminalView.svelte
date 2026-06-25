@@ -2,7 +2,9 @@
   import { Terminal } from '@xterm/xterm'
   import { FitAddon } from '@xterm/addon-fit'
   import { WebLinksAddon } from '@xterm/addon-web-links'
+  import type { IDisposable } from '@xterm/xterm'
   import type { Connection, LogEntry } from '$lib/stores/connections.svelte'
+  import { sendData } from '$lib/api'
   import '@xterm/xterm/css/xterm.css'
 
   let { connection }: { connection: Connection } = $props()
@@ -18,12 +20,14 @@
   }
 
   // Effect 1: create the terminal once the container div is in the DOM.
+  // disableStdin starts true; Effect 3 enables it in raw mode.
   $effect(() => {
     if (!container) return
 
     const t = new Terminal({
-      cursorBlink:  true,
-      cursorStyle:  'bar',
+      cursorBlink:   true,
+      cursorStyle:   'bar',
+      disableStdin:  true,  // enabled only in raw mode (Effect 3)
       fontFamily:   '"Cascadia Code", "Fira Code", "JetBrains Mono", monospace',
       fontSize:     12,
       lineHeight:   1.4,
@@ -82,6 +86,28 @@
     for (; written < len; written++) {
       writeEntry(t, connection.log[written])
     }
+  })
+
+  // Effect 3: raw mode — forward keystrokes directly to the device.
+  $effect(() => {
+    const mode = connection.terminalMode  // tracked
+    const t    = term                     // tracked
+
+    if (!t) return
+
+    let listener: IDisposable | null = null
+
+    if (mode === 'raw') {
+      t.options.disableStdin = false
+      const id = connection.id
+      listener = t.onData((data: string) => {
+        void sendData(id, new TextEncoder().encode(data))
+      })
+    } else {
+      t.options.disableStdin = true
+    }
+
+    return () => { listener?.dispose() }
   })
 </script>
 

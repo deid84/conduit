@@ -40,6 +40,7 @@ export interface Connection {
   log: LogEntry[]
   rxBytes: number
   txBytes: number
+  terminalMode: 'line' | 'raw'
 }
 
 function makeLabel(conn: ConnConfig): string {
@@ -81,12 +82,13 @@ export async function connect(config: ConnConfig): Promise<void> {
   const { id } = await openConnection(config)
   store.connections.push({
     id,
-    label:   makeLabel(config),
-    status:  'connected',
-    conn:    config,
-    log:     [],
-    rxBytes: 0,
-    txBytes: 0,
+    label:        makeLabel(config),
+    status:       'connected',
+    conn:         config,
+    log:          [],
+    rxBytes:      0,
+    txBytes:      0,
+    terminalMode: 'line',
   })
   store.activeId    = id
   store.newConnOpen = false
@@ -127,6 +129,11 @@ export const store = $state({
   setStatus(id: string, status: ConnectionStatus) {
     const conn = this.connections.find(c => c.id === id)
     if (conn) conn.status = status
+  },
+
+  setTerminalMode(id: string, mode: 'line' | 'raw') {
+    const conn = this.connections.find(c => c.id === id)
+    if (conn) conn.terminalMode = mode
   },
 
   appendLog(id: string, entry: LogEntry) {
