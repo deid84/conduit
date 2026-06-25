@@ -34,6 +34,30 @@
     </button>
   {/each}
 
+  <!-- Pseudo-tab shown while the new-connection form is open (only when other connections exist) -->
+  {#if store.newConnOpen && store.connections.length > 0}
+    <div
+      class="flex items-center gap-2 border-r border-border bg-background px-4 text-xs font-medium text-foreground"
+    >
+      <span class="size-1.5 shrink-0 rounded-full bg-zinc-600"></span>
+      New connection
+      <span
+        role="button"
+        tabindex="0"
+        class="ml-0.5 flex size-4 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
+        title="Cancel"
+        onclick={() => {
+          store.newConnOpen = false
+          store.activeId = store.connections[store.connections.length - 1].id
+        }}
+        onkeydown={(e) => e.key === 'Enter' && (() => {
+          store.newConnOpen = false
+          store.activeId = store.connections[store.connections.length - 1].id
+        })()}
+      >×</span>
+    </div>
+  {/if}
+
   <button
     class="flex items-center px-3 text-lg leading-none text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
     title="New connection"

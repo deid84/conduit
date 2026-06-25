@@ -2,6 +2,7 @@ use axum::{
     routing::{delete, get, post},
     Router,
 };
+use tower_http::cors::CorsLayer;
 
 use crate::state::AppState;
 
@@ -16,5 +17,6 @@ pub fn router(state: AppState) -> Router {
         .route("/api/connections/{id}", delete(connections::close))
         .route("/api/connections/{id}/send", post(connections::send))
         .route("/api/connections/{id}/stream", get(stream::handler))
+        .layer(CorsLayer::permissive())
         .with_state(state)
 }
