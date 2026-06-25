@@ -59,7 +59,12 @@
   {/if}
 
   <button
-    class="flex items-center px-3 text-lg leading-none text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
+    class={cn(
+      'flex items-center px-3 text-lg leading-none transition-colors',
+      store.newConnOpen || store.connections.length === 0
+        ? 'bg-muted/50 text-foreground'
+        : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground',
+    )}
     title="New connection"
     onclick={() => store.openNew()}
   >+</button>

@@ -39,7 +39,7 @@ pub async fn list(State(state): State<AppState>) -> Json<Vec<ConnectionInfo>> {
 pub async fn open(
     State(state): State<AppState>,
     Json(req): Json<OpenRequest>,
-) -> Result<(StatusCode, Json<ConnectionInfo>), StatusCode> {
+) -> Result<(StatusCode, Json<ConnectionInfo>), (StatusCode, String)> {
     let conn = match req {
         OpenRequest::Serial(cfg) => serial::open(cfg),
         OpenRequest::Tcp(cfg) => tcp::connect(cfg).await,
@@ -47,7 +47,7 @@ pub async fn open(
     }
     .map_err(|e| {
         tracing::error!("open connection: {e:#}");
-        StatusCode::INTERNAL_SERVER_ERROR
+        (StatusCode::INTERNAL_SERVER_ERROR, format!("{e:#}"))
     })?;
 
     let info = ConnectionInfo {
