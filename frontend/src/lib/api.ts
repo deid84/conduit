@@ -1,7 +1,16 @@
 import type { ConnConfig, SerialConfig } from './stores/connections.svelte'
 
-export const BASE_URL = (import.meta.env.VITE_API_BASE as string | undefined) ?? 'http://localhost:3000'
-export const WS_BASE  = BASE_URL.replace(/^http/, 'ws')
+declare global {
+  interface Window { __CONDUIT_API__?: string }
+}
+
+// Priority: Tauri injection → VITE_API_BASE env var → dev default.
+export const BASE_URL =
+  window.__CONDUIT_API__ ??
+  (import.meta.env.VITE_API_BASE as string | undefined) ??
+  'http://localhost:3000'
+
+export const WS_BASE = BASE_URL.replace(/^http/, 'ws')
 
 function serialApiBody(cfg: SerialConfig): Record<string, unknown> {
   const dataBits: Record<number, string> = { 5: 'five', 6: 'six', 7: 'seven', 8: 'eight' }
@@ -42,7 +51,7 @@ export async function sendData(id: string, data: Uint8Array): Promise<void> {
   await fetch(`${BASE_URL}/api/connections/${id}/send`, {
     method:  'POST',
     headers: { 'Content-Type': 'application/octet-stream' },
-    body:    data,
+    body:    new Blob([data]),
   })
 }
 

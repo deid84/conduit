@@ -7,6 +7,10 @@ edition.workspace = true
 name = "conduit-headless"
 path = "src/main.rs"
 
+[lib]
+name = "conduit_headless"
+path = "src/lib.rs"
+
 [dependencies]
 conduit-core = { path = "../conduit-core" }
 tokio.workspace = true

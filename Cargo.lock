@@ -426,11 +426,11 @@ name = "conduit-tauri"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "conduit-core",
- "serde",
- "serde_json",
+ "axum",
+ "conduit-headless",
  "tauri",
  "tauri-build",
+ "tokio",
  "tracing",
  "tracing-subscriber",
 ]

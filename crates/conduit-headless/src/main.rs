@@ -1,8 +1,6 @@
 use anyhow::Result;
+use conduit_headless::{routes, state};
 use tracing::info;
-
-mod routes;
-mod state;
 
 #[tokio::main]
 async fn main() -> Result<()> {

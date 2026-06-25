@@ -10,14 +10,7 @@
     "frontendDist": "../../frontend/dist"
   },
   "app": {
-    "windows": [
-      {
-        "title": "Conduit",
-        "width": 1200,
-        "height": 800,
-        "resizable": true
-      }
-    ],
+    "windows": [],
     "security": {
       "csp": null
     }
