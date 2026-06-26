@@ -45,18 +45,18 @@
   --ring:               #FBB040;
 }
 
-/* ── Brand dark — Graphite surface ─────────────────────────────── */
+/* ── Brand dark — Cinder surface ────────────────────────────────── */
 [data-theme="dark"] {
   color-scheme: dark;
-  --background:         #1C1813;   /* Graphite  */
+  --background:         #252019;   /* Cinder    */
   --foreground:         #F4F1EB;   /* Bone      */
-  --muted:              #2C251E;
+  --muted:              #332B22;
   --muted-foreground:   #9A8A78;
-  --border:             #3A3028;
-  --input:              #241D17;
+  --border:             #433A2C;
+  --input:              #2C231A;
   --primary:            #FBB040;   /* Amber     */
   --primary-foreground: #1C1813;   /* Graphite  */
-  --accent:             #2C251E;
+  --accent:             #332B22;
   --accent-foreground:  #F4F1EB;
   --destructive:        #E05555;
   --ring:               #FBB040;
@@ -66,15 +66,15 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --background:         #1C1813;
+    --background:         #252019;
     --foreground:         #F4F1EB;
-    --muted:              #2C251E;
+    --muted:              #332B22;
     --muted-foreground:   #9A8A78;
-    --border:             #3A3028;
-    --input:              #241D17;
+    --border:             #433A2C;
+    --input:              #2C231A;
     --primary:            #FBB040;
     --primary-foreground: #1C1813;
-    --accent:             #2C251E;
+    --accent:             #332B22;
     --accent-foreground:  #F4F1EB;
     --destructive:        #E05555;
     --ring:               #FBB040;

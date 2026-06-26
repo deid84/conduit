@@ -34,14 +34,14 @@
     brightWhite:         '#1C1813',
   }
 
-  // Brand dark — Graphite surface
+  // Brand dark — Cinder surface
   const THEME_MOCHA: ITheme = {
-    background:          '#1C1813',
+    background:          '#252019',
     foreground:          '#F4F1EB',
     cursor:              '#FBB040',
     cursorAccent:        '#1C1813',
-    selectionBackground: '#3A3028',
-    black:               '#2C251E',
+    selectionBackground: '#433A2C',
+    black:               '#332B22',
     red:                 '#E05555',
     green:               '#7AB87A',
     yellow:              '#FBB040',
