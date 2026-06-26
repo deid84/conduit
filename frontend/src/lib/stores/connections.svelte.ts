@@ -43,7 +43,9 @@ export interface Connection {
   terminalMode: 'line' | 'raw'
   viewMode: 'ascii' | 'hex'
   fileLogging: boolean
-  logStart:    number   // log index when recording started; -1 = never recorded
+  logStart:    number         // log index when recording started; -1 = never recorded
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  fileHandle:  any | null     // FileSystemFileHandle when File System Access API is available
 }
 
 function makeLabel(conn: ConnConfig): string {
@@ -95,6 +97,7 @@ export async function connect(config: ConnConfig): Promise<void> {
     viewMode:     'ascii',
     fileLogging:  false,
     logStart:     -1,
+    fileHandle:   null,
   })
   store.activeId    = id
   store.newConnOpen = false
@@ -108,31 +111,25 @@ export async function disconnect(id: string): Promise<void> {
   store.remove(id)
 }
 
-export function exportLog(conn: Connection): void {
-  if (conn.logStart < 0) return
-  const entries = conn.log.slice(conn.logStart)
-  if (entries.length === 0) return
+// ── File logging ────────────────────────────────────────────────────
 
+function buildLogContent(conn: Connection, entries: LogEntry[]): string {
   const decoder = new TextDecoder('utf-8', { fatal: false })
-
-  const started = new Date(entries[0].ts)
   const header = [
     'Conduit session log',
     `Connection : ${conn.label}`,
-    `Started    : ${started.toLocaleString()}`,
+    `Started    : ${new Date(entries[0].ts).toLocaleString()}`,
     '',
   ].join('\n')
-
   const lines = entries.map(e => {
-    const d   = new Date(e.ts)
-    const hh  = String(d.getHours()).padStart(2, '0')
-    const mm  = String(d.getMinutes()).padStart(2, '0')
-    const ss  = String(d.getSeconds()).padStart(2, '0')
-    const ms  = String(d.getMilliseconds()).padStart(3, '0')
-    const ts  = `${hh}:${mm}:${ss}.${ms}`
-    const dir = e.direction === 'rx' ? 'RX' : 'TX'
-    const raw = new Uint8Array(e.raw)
-    const text = decoder.decode(raw).split('').map(ch => {
+    const d  = new Date(e.ts)
+    const ts = [
+      String(d.getHours()).padStart(2, '0'),
+      String(d.getMinutes()).padStart(2, '0'),
+      String(d.getSeconds()).padStart(2, '0'),
+    ].join(':') + '.' + String(d.getMilliseconds()).padStart(3, '0')
+    const dir  = e.direction === 'rx' ? 'RX' : 'TX'
+    const text = decoder.decode(new Uint8Array(e.raw)).split('').map(ch => {
       const code = ch.charCodeAt(0)
       if (ch === '\n' || ch === '\r' || ch === '\t') return ch
       if (code < 0x20 || code === 0x7F) return `\\x${code.toString(16).padStart(2, '0')}`
@@ -140,17 +137,70 @@ export function exportLog(conn: Connection): void {
     }).join('')
     return `[${ts}] ${dir}  ${text}`
   })
+  return header + lines.join('\n')
+}
 
-  const content = header + lines.join('\n')
-  const blob    = new Blob([content], { type: 'text/plain;charset=utf-8' })
-  const url     = URL.createObjectURL(blob)
-  const a       = document.createElement('a')
-  a.href        = url
-  a.download    = `conduit-${conn.label.replace(/[^a-zA-Z0-9._-]/g, '_')}-${Date.now()}.log`
+function fallbackDownload(content: string, label: string): void {
+  const blob = new Blob([content], { type: 'text/plain;charset=utf-8' })
+  const url  = URL.createObjectURL(blob)
+  const a    = document.createElement('a')
+  a.href     = url
+  a.download = `conduit-${label.replace(/[^a-zA-Z0-9._-]/g, '_')}-${Date.now()}.log`
   document.body.appendChild(a)
   a.click()
   document.body.removeChild(a)
   URL.revokeObjectURL(url)
+}
+
+// Shows the OS "Save as" dialog before starting; falls back to immediate
+// recording (without a pre-chosen path) if the API is unavailable.
+export async function startFileLog(id: string): Promise<void> {
+  const conn = store.connections.find(c => c.id === id)
+  if (!conn || conn.fileLogging) return
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let handle: any = null
+  if (typeof window !== 'undefined' && 'showSaveFilePicker' in window) {
+    try {
+      const safeName = conn.label.replace(/[^a-zA-Z0-9._-]/g, '_')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      handle = await (window as any).showSaveFilePicker({
+        suggestedName: `conduit-${safeName}-${new Date().toISOString().slice(0, 10)}.log`,
+        types: [{ description: 'Log file', accept: { 'text/plain': ['.log', '.txt'] } }],
+      })
+    } catch {
+      return  // user cancelled the dialog
+    }
+  }
+
+  conn.fileHandle  = handle
+  conn.fileLogging = true
+  conn.logStart    = conn.log.length
+}
+
+// Stops recording and writes the log to the chosen file (or triggers a
+// browser download if the File System Access API was not available).
+export async function stopAndSaveLog(conn: Connection): Promise<void> {
+  const handle  = conn.fileHandle
+  const entries = conn.logStart >= 0 ? conn.log.slice(conn.logStart) : []
+
+  conn.fileLogging = false
+  conn.fileHandle  = null
+
+  if (entries.length === 0) return
+  const content = buildLogContent(conn, entries)
+
+  if (handle) {
+    try {
+      const writable = await handle.createWritable()
+      await writable.write(content)
+      await writable.close()
+    } catch {
+      fallbackDownload(content, conn.label)
+    }
+  } else {
+    fallbackDownload(content, conn.label)
+  }
 }
 
 export const store = $state({
@@ -195,17 +245,6 @@ export const store = $state({
   clearLog(id: string) {
     const conn = this.connections.find(c => c.id === id)
     if (conn) conn.log = []
-  },
-
-  toggleFileLog(id: string) {
-    const conn = this.connections.find(c => c.id === id)
-    if (!conn) return
-    if (conn.fileLogging) {
-      conn.fileLogging = false
-    } else {
-      conn.fileLogging = true
-      conn.logStart    = conn.log.length  // capture only data from this moment on
-    }
   },
 
   appendLog(id: string, entry: LogEntry) {
