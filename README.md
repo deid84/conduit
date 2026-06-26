@@ -36,11 +36,27 @@ cargo tauri dev
 
 Tauri starts the Vite dev server automatically and opens the app window.
 
-### Headless gateway (Axum REST + WebSocket)
+### Headless gateway (Axum REST + WebSocket + UI)
+
+Build the frontend first, then start the server:
 
 ```sh
+cd frontend && npm run build && cd ..
 cargo run -p conduit-headless
 # Listening on 0.0.0.0:3000
+# Open http://localhost:3000 in a browser
+```
+
+The binary serves `frontend/dist` as static files with an `index.html`
+fallback for client-side routing. To override the path:
+
+```sh
+# via environment variable
+CONDUIT_STATIC_DIR=/path/to/dist cargo run -p conduit-headless
+
+# or via .env file in the working directory
+echo 'CONDUIT_STATIC_DIR=/path/to/dist' > .env
+cargo run -p conduit-headless
 ```
 
 ### Frontend only (Vite dev server)
