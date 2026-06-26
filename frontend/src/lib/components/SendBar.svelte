@@ -159,7 +159,7 @@
   </div>
 
   <button
-    class="rounded border border-border px-2 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40"
+    class="rounded border border-destructive/50 px-2 py-1.5 text-xs text-destructive transition-colors hover:bg-destructive hover:text-white disabled:opacity-40"
     title="Clear terminal"
     onclick={() => store.activeId && store.clearLog(store.activeId)}
     disabled={!store.active}
