@@ -3,6 +3,8 @@
   import { sendData } from '$lib/api'
   import { cn } from '$lib/utils'
 
+  const viewMode = $derived(store.active?.viewMode ?? 'ascii')
+
   type Mode    = 'text' | 'hex'
   type LineEnd = 'none' | 'cr' | 'lf' | 'crlf'
 
@@ -143,4 +145,18 @@
       Type directly in the terminal above — keystrokes go to the device in real time
     </span>
   {/if}
+
+  <!-- VIEW toggle: always visible, controls how received data is displayed -->
+  <div class="ml-auto flex rounded border border-border text-[10px]" title="Terminal display mode">
+    {#each (['ascii', 'hex'] as const) as m}
+      <button
+        class={cn(
+          'px-2 py-1 font-mono font-medium transition-colors',
+          viewMode === m ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'
+        )}
+        onclick={() => store.activeId && store.setViewMode(store.activeId, m)}
+        disabled={!store.active}
+      >{m.toUpperCase()}</button>
+    {/each}
+  </div>
 </div>

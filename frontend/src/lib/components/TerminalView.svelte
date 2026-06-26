@@ -4,7 +4,6 @@
   import { WebLinksAddon } from '@xterm/addon-web-links'
   import type { IDisposable, ITheme } from '@xterm/xterm'
   import type { Connection, LogEntry } from '$lib/stores/connections.svelte'
-  import { store } from '$lib/stores/connections.svelte'
   import { sendData } from '$lib/api'
   import { themeStore, effectiveTheme } from '$lib/stores/theme.svelte'
   import '@xterm/xterm/css/xterm.css'
@@ -64,7 +63,8 @@
   let container = $state<HTMLDivElement | null>(null)
   let term      = $state<Terminal | null>(null)
   let written   = 0       // cursor into connection.log — not reactive
-  let lastViewMode: 'ascii' | 'hex' = 'ascii'
+  // Initialized from prop once at mount; NOT read inside Effect 1 to avoid tracking.
+  let lastViewMode: 'ascii' | 'hex' = connection.viewMode
 
   function formatHex(raw: number[]): string {
     return raw.map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' ')
@@ -81,6 +81,8 @@
   }
 
   // Effect 1: create/destroy terminal when container mounts.
+  // Does NOT read connection.viewMode — keeping it out of this effect's
+  // dependency set so that toggling ASCII/HEX does not destroy+recreate the terminal.
   $effect(() => {
     if (!container) return
 
@@ -106,7 +108,6 @@
     const ro = new ResizeObserver(() => fitAddon.fit())
     ro.observe(container)
 
-    lastViewMode = connection.viewMode
     term = t
 
     return () => {
@@ -166,20 +167,4 @@
   })
 </script>
 
-<div class="relative flex-1 overflow-hidden" style="background-color: {xtermTheme.background}">
-  <!-- xterm container -->
-  <div bind:this={container} class="absolute inset-0"></div>
-
-  <!-- HEX / ASCII toggle — top-right overlay -->
-  <div class="absolute right-2 top-1 z-10 flex rounded border border-border/60 bg-background/80 text-[10px] backdrop-blur-sm">
-    {#each (['ascii', 'hex'] as const) as m}
-      <button
-        class="px-2 py-0.5 font-mono font-medium transition-colors {connection.viewMode === m
-          ? 'bg-muted text-foreground'
-          : 'text-muted-foreground hover:text-foreground'}"
-        title="{m === 'hex' ? 'Hex view' : 'ASCII view'}"
-        onclick={() => store.setViewMode(connection.id, m)}
-      >{m.toUpperCase()}</button>
-    {/each}
-  </div>
-</div>
+<div bind:this={container} class="flex-1 overflow-hidden" style="background-color: {xtermTheme.background}"></div>
