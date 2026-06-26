@@ -18,12 +18,7 @@
   const hexValid = $derived(mode === 'hex' && /^([0-9a-fA-F]{2}\s*)+$/.test(input.trim()))
   const canSend  = $derived(store.active !== null && (mode === 'text' ? input.trim().length > 0 : hexValid))
 
-  function toggleTermMode() {
-    if (!store.activeId) return
-    store.setTerminalMode(store.activeId, termMode === 'line' ? 'raw' : 'line')
-  }
-
-  // Normalize hex: strip non-hex, uppercase, insert space after every 2 chars.
+// Normalize hex: strip non-hex, uppercase, insert space after every 2 chars.
   // Trailing space added automatically so cursor lands on the next pair.
   function onHexInput(e: Event) {
     const el  = e.target as HTMLInputElement
@@ -73,19 +68,20 @@
 </script>
 
 <div class="flex shrink-0 items-center gap-2 border-t border-border bg-background px-3 py-2">
-  <!-- LINE / RAW terminal mode toggle -->
-  <div class="flex rounded border border-border text-[10px]">
+  <!-- LINE / RAW terminal mode toggle — disabled entirely in HEX input mode -->
+  <div
+    class="flex rounded border border-border text-[10px]"
+    title={mode === 'hex' ? 'Switch to TEXT input to change terminal mode' : undefined}
+  >
     {#each (['line', 'raw'] as const) as m}
       <button
         class={cn(
           'px-2 py-1 font-medium transition-colors',
           termMode === m ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'
         )}
-        title={m === 'raw'
-          ? (mode === 'hex' ? 'Switch to TEXT input to enable Raw mode' : 'Raw mode: keystrokes go to device directly')
-          : 'Line mode: compose and send lines'}
-        onclick={toggleTermMode}
-        disabled={!store.active || (m === 'raw' && mode === 'hex')}
+        title={m === 'raw' ? 'Raw mode: keystrokes go to device directly' : 'Line mode: compose and send lines'}
+        onclick={() => store.activeId && store.setTerminalMode(store.activeId, m)}
+        disabled={!store.active || mode === 'hex'}
       >{m.toUpperCase()}</button>
     {/each}
   </div>
