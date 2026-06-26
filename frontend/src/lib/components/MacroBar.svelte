@@ -93,7 +93,7 @@
       </div>
       {#if newMode === 'text'}
         <select
-          class="rounded border border-border bg-background px-1.5 py-1.5 text-xs text-muted-foreground focus:outline-none"
+          class="rounded border border-border bg-background pl-1.5 pr-6 py-1.5 text-xs text-muted-foreground focus:outline-none"
           bind:value={newLineEnd}
         >
           {#each LINE_ENDS as opt}<option value={opt.v}>{opt.label}</option>{/each}

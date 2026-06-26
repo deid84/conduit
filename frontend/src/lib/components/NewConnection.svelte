@@ -60,7 +60,7 @@
   ]
 
   const INPUT_CLS  = 'w-full rounded border border-border bg-muted/20 px-2 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/50 focus:border-primary/60 focus:outline-none'
-  const SELECT_CLS = 'w-full rounded border border-border bg-muted/20 px-2 py-1.5 text-xs text-foreground focus:border-primary/60 focus:outline-none'
+  const SELECT_CLS = 'w-full rounded border border-border bg-muted/20 pl-2 pr-6 py-1.5 text-xs text-foreground focus:border-primary/60 focus:outline-none'
   const LABEL_CLS  = 'mb-1 block text-[11px] text-muted-foreground'
 </script>
 

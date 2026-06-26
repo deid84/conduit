@@ -135,7 +135,7 @@
 
     {#if mode === 'text'}
       <select
-        class="rounded border border-border bg-background px-1.5 py-0.5 text-xs text-muted-foreground focus:border-primary/60 focus:outline-none"
+        class="rounded border border-border bg-background pl-1.5 pr-6 py-0.5 text-xs text-muted-foreground focus:border-primary/60 focus:outline-none"
         bind:value={lineEnd}
       >
         {#each LINE_END_OPTS as opt}
