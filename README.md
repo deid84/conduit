@@ -1,6 +1,6 @@
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="logo-dark.png">
-  <img alt="Conduit" src="logo.png" height="64">
+  <img alt="Conduit" src="logo.png">
 </picture>
 
 A serial/TCP/UDP monitor and protocol gateway — alternative to Hercules.
