@@ -126,9 +126,10 @@
     const t        = term
 
     if (viewMode !== lastViewMode) {
-      t.clear()
-      written      = 0
-      lastViewMode = viewMode
+      t.clear(); written = 0; lastViewMode = viewMode
+    } else if (len < written) {
+      // log was cleared externally — wipe the terminal display
+      t.clear(); written = 0
     }
 
     for (; written < len; written++) {

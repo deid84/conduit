@@ -143,6 +143,11 @@ export const store = $state({
     if (conn) conn.viewMode = mode
   },
 
+  clearLog(id: string) {
+    const conn = this.connections.find(c => c.id === id)
+    if (conn) conn.log = []
+  },
+
   appendLog(id: string, entry: LogEntry) {
     const conn = this.connections.find(c => c.id === id)
     if (!conn) return

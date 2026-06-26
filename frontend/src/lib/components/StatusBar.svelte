@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Connection } from '$lib/stores/connections.svelte'
+  import { store } from '$lib/stores/connections.svelte'
   import { cn } from '$lib/utils'
 
   let { connection }: { connection: Connection } = $props()
@@ -40,10 +41,12 @@
 
   <span class="text-muted-foreground">{details()}</span>
 
-  <span class="ml-auto text-muted-foreground">
-    RX {fmtBytes(connection.rxBytes)}
-  </span>
-  <span class="text-muted-foreground">
-    TX {fmtBytes(connection.txBytes)}
-  </span>
+  <button
+    class="ml-auto rounded px-2 py-0.5 text-[10px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+    title="Clear terminal"
+    onclick={() => store.clearLog(connection.id)}
+  >Clear</button>
+
+  <span class="text-muted-foreground">RX {fmtBytes(connection.rxBytes)}</span>
+  <span class="text-muted-foreground">TX {fmtBytes(connection.txBytes)}</span>
 </div>
