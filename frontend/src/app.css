@@ -93,4 +93,7 @@
     height: 100dvh;
     overflow: hidden;
   }
+  #app {
+    height: 100%;
+  }
 }
