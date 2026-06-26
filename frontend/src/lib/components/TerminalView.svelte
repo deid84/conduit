@@ -4,6 +4,7 @@
   import { WebLinksAddon } from '@xterm/addon-web-links'
   import type { IDisposable, ITheme } from '@xterm/xterm'
   import type { Connection, LogEntry } from '$lib/stores/connections.svelte'
+  import { store } from '$lib/stores/connections.svelte'
   import { sendData } from '$lib/api'
   import { themeStore, effectiveTheme } from '$lib/stores/theme.svelte'
   import '@xterm/xterm/css/xterm.css'
@@ -60,11 +61,36 @@
 
   let { connection }: { connection: Connection } = $props()
 
-  let container = $state<HTMLDivElement | null>(null)
-  let term      = $state<Terminal | null>(null)
-  let written   = 0       // cursor into connection.log — not reactive
-  // Initialized from prop once at mount; NOT read inside Effect 1 to avoid tracking.
+  let container  = $state<HTMLDivElement | null>(null)
+  let term       = $state<Terminal | null>(null)
+  let written    = 0       // cursor into connection.log — not reactive
   let lastViewMode: 'ascii' | 'hex' = connection.viewMode
+
+  // Context menu state
+  let ctxVisible = $state(false)
+  let ctxX       = $state(0)
+  let ctxY       = $state(0)
+
+  function showCtxMenu(e: MouseEvent) {
+    e.preventDefault()
+    // Clamp so the menu doesn't overflow the viewport
+    ctxX = Math.min(e.clientX, window.innerWidth  - 160)
+    ctxY = Math.min(e.clientY, window.innerHeight - 80)
+    ctxVisible = true
+  }
+
+  function clearAndClose() {
+    store.clearLog(connection.id)
+    ctxVisible = false
+  }
+
+  // Close on any click outside the menu
+  $effect(() => {
+    if (!ctxVisible) return
+    const close = () => { ctxVisible = false }
+    window.addEventListener('pointerdown', close, { once: true })
+    return () => window.removeEventListener('pointerdown', close)
+  })
 
   function formatHex(raw: number[]): string {
     return raw.map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' ')
@@ -108,10 +134,13 @@
     const ro = new ResizeObserver(() => fitAddon.fit())
     ro.observe(container)
 
+    container.addEventListener('contextmenu', showCtxMenu)
+
     term = t
 
     return () => {
       ro.disconnect()
+      container.removeEventListener('contextmenu', showCtxMenu)
       t.dispose()
       term    = null
       written = 0
@@ -169,3 +198,23 @@
 </script>
 
 <div bind:this={container} class="flex-1 overflow-hidden" style="background-color: {xtermTheme.background}"></div>
+
+{#if ctxVisible}
+  <!-- position:fixed escapes overflow:hidden; pointerdown stopPropagation prevents the
+       window listener from firing immediately and closing the menu on the same event. -->
+  <div
+    class="fixed z-50 min-w-36 overflow-hidden rounded border border-border bg-background py-1 shadow-lg text-xs"
+    style="left: {ctxX}px; top: {ctxY}px"
+    onpointerdown={(e) => e.stopPropagation()}
+  >
+    <button
+      class="flex w-full items-center gap-2 px-3 py-1.5 text-left text-foreground hover:bg-muted"
+      onclick={clearAndClose}
+    >
+      <svg class="size-3.5 shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M2 4h12M6 4V2h4v2M5 4l1 10h4l1-10" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Clear terminal
+    </button>
+  </div>
+{/if}
