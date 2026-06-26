@@ -81,9 +81,11 @@
           'px-2 py-1 font-medium transition-colors',
           termMode === m ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'
         )}
-        title={m === 'raw' ? 'Raw mode: keystrokes go to device directly' : 'Line mode: compose and send lines'}
+        title={m === 'raw'
+          ? (mode === 'hex' ? 'Switch to TEXT input to enable Raw mode' : 'Raw mode: keystrokes go to device directly')
+          : 'Line mode: compose and send lines'}
         onclick={toggleTermMode}
-        disabled={!store.active}
+        disabled={!store.active || (m === 'raw' && mode === 'hex')}
       >{m.toUpperCase()}</button>
     {/each}
   </div>
