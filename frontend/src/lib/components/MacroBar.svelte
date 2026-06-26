@@ -69,23 +69,23 @@
   {#if adding}
     <div class="flex items-center gap-2 border-b border-border px-3 py-1.5">
       <input
-        class="w-24 rounded border border-border bg-background px-2 py-1 text-xs text-foreground placeholder:text-muted-foreground/50 focus:border-primary/60 focus:outline-none"
+        class="w-24 rounded border border-border bg-background px-2 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/50 focus:border-primary/60 focus:outline-none"
         placeholder="Label"
         bind:value={newLabel}
         onkeydown={(e) => e.key === 'Enter' && confirmAdd()}
         autofocus
       />
       <input
-        class="flex-1 rounded border border-border bg-background px-2 py-1 font-mono text-xs text-foreground placeholder:text-muted-foreground/50 focus:border-primary/60 focus:outline-none"
+        class="flex-1 rounded border border-border bg-background px-2 py-1.5 font-mono text-xs text-foreground placeholder:text-muted-foreground/50 focus:border-primary/60 focus:outline-none"
         placeholder={newMode === 'hex' ? 'AA BB CC …' : 'payload'}
         bind:value={newPayload}
         onkeydown={(e) => e.key === 'Enter' && confirmAdd()}
       />
       <!-- TEXT / HEX -->
-      <div class="flex rounded border border-border text-[10px]">
+      <div class="flex rounded border border-border text-xs">
         {#each (['text', 'hex'] as MacroMode[]) as m}
           <button
-            class={cn('px-2 py-1 font-medium transition-colors',
+            class={cn('px-2 py-1.5 font-medium transition-colors',
               newMode === m ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground')}
             onclick={() => newMode = m}
           >{m.toUpperCase()}</button>
@@ -93,19 +93,19 @@
       </div>
       {#if newMode === 'text'}
         <select
-          class="rounded border border-border bg-background px-1.5 py-1 text-[10px] text-muted-foreground focus:outline-none"
+          class="rounded border border-border bg-background px-1.5 py-1.5 text-xs text-muted-foreground focus:outline-none"
           bind:value={newLineEnd}
         >
           {#each LINE_ENDS as opt}<option value={opt.v}>{opt.label}</option>{/each}
         </select>
       {/if}
       <button
-        class="rounded bg-primary px-2 py-1 text-[10px] font-semibold text-primary-foreground disabled:opacity-40"
+        class="rounded bg-primary px-2 py-1.5 text-xs font-semibold text-primary-foreground disabled:opacity-40"
         onclick={confirmAdd}
         disabled={!newLabel.trim() || !newPayload.trim()}
       >Add</button>
       <button
-        class="text-[10px] text-muted-foreground hover:text-foreground"
+        class="text-xs text-muted-foreground hover:text-foreground"
         onclick={cancelAdd}
       >Cancel</button>
     </div>
