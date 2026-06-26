@@ -45,7 +45,7 @@ cargo run -p conduit-headless
 ```sh
 cd frontend
 npm run dev
-# http://localhost:5173
+# http://localhost:8419
 ```
 
 ## Building for production

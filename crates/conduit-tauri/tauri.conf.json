@@ -5,7 +5,7 @@
   "identifier": "it.deid84.conduit",
   "build": {
     "beforeDevCommand": { "script": "npm run dev", "cwd": "../../frontend" },
-    "devUrl": "http://localhost:5173",
+    "devUrl": "http://localhost:8419",
     "beforeBuildCommand": { "script": "npm run build", "cwd": "../../frontend" },
     "frontendDist": "../../frontend/dist"
   },
