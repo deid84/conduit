@@ -1,7 +1,9 @@
 <script lang="ts">
   import { store, disconnect } from '$lib/stores/connections.svelte'
-  import ThemeToggle from './ThemeToggle.svelte'
+  import SettingsPanel from './SettingsPanel.svelte'
   import { cn } from '$lib/utils'
+
+  let settingsOpen = $state(false)
 
   const STATUS_COLOR: Record<string, string> = {
     connected:    'bg-green-400',
@@ -70,8 +72,26 @@
     onclick={() => store.openNew()}
   >+</button>
 
-  <!-- push theme toggle to the right -->
   <div class="ml-auto flex items-center px-2">
-    <ThemeToggle />
+    <button
+      class={cn(
+        'flex size-7 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground',
+        settingsOpen && 'bg-muted/50 text-foreground'
+      )}
+      title="Settings"
+      onclick={() => settingsOpen = !settingsOpen}
+    >
+      <!-- sliders / settings icon -->
+      <svg class="size-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+        <line x1="2" y1="4" x2="14" y2="4"/>
+        <line x1="2" y1="8" x2="14" y2="8"/>
+        <line x1="2" y1="12" x2="14" y2="12"/>
+        <circle cx="5"  cy="4"  r="1.5" fill="currentColor" stroke="none"/>
+        <circle cx="10" cy="8"  r="1.5" fill="currentColor" stroke="none"/>
+        <circle cx="7"  cy="12" r="1.5" fill="currentColor" stroke="none"/>
+      </svg>
+    </button>
   </div>
 </div>
+
+<SettingsPanel bind:open={settingsOpen} />

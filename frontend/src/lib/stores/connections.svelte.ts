@@ -42,6 +42,8 @@ export interface Connection {
   txBytes: number
   terminalMode: 'line' | 'raw'
   viewMode: 'ascii' | 'hex'
+  fileLogging: boolean
+  logStart:    number   // log index when recording started; -1 = never recorded
 }
 
 function makeLabel(conn: ConnConfig): string {
@@ -91,6 +93,8 @@ export async function connect(config: ConnConfig): Promise<void> {
     txBytes:      0,
     terminalMode: 'line',
     viewMode:     'ascii',
+    fileLogging:  false,
+    logStart:     -1,
   })
   store.activeId    = id
   store.newConnOpen = false
@@ -102,6 +106,51 @@ export async function disconnect(id: string): Promise<void> {
   _sockets.delete(id)
   await closeConnection(id).catch(() => {})
   store.remove(id)
+}
+
+export function exportLog(conn: Connection): void {
+  if (conn.logStart < 0) return
+  const entries = conn.log.slice(conn.logStart)
+  if (entries.length === 0) return
+
+  const decoder = new TextDecoder('utf-8', { fatal: false })
+
+  const started = new Date(entries[0].ts)
+  const header = [
+    'Conduit session log',
+    `Connection : ${conn.label}`,
+    `Started    : ${started.toLocaleString()}`,
+    '',
+  ].join('\n')
+
+  const lines = entries.map(e => {
+    const d   = new Date(e.ts)
+    const hh  = String(d.getHours()).padStart(2, '0')
+    const mm  = String(d.getMinutes()).padStart(2, '0')
+    const ss  = String(d.getSeconds()).padStart(2, '0')
+    const ms  = String(d.getMilliseconds()).padStart(3, '0')
+    const ts  = `${hh}:${mm}:${ss}.${ms}`
+    const dir = e.direction === 'rx' ? 'RX' : 'TX'
+    const raw = new Uint8Array(e.raw)
+    const text = decoder.decode(raw).split('').map(ch => {
+      const code = ch.charCodeAt(0)
+      if (ch === '\n' || ch === '\r' || ch === '\t') return ch
+      if (code < 0x20 || code === 0x7F) return `\\x${code.toString(16).padStart(2, '0')}`
+      return ch
+    }).join('')
+    return `[${ts}] ${dir}  ${text}`
+  })
+
+  const content = header + lines.join('\n')
+  const blob    = new Blob([content], { type: 'text/plain;charset=utf-8' })
+  const url     = URL.createObjectURL(blob)
+  const a       = document.createElement('a')
+  a.href        = url
+  a.download    = `conduit-${conn.label.replace(/[^a-zA-Z0-9._-]/g, '_')}-${Date.now()}.log`
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
 }
 
 export const store = $state({
@@ -146,6 +195,17 @@ export const store = $state({
   clearLog(id: string) {
     const conn = this.connections.find(c => c.id === id)
     if (conn) conn.log = []
+  },
+
+  toggleFileLog(id: string) {
+    const conn = this.connections.find(c => c.id === id)
+    if (!conn) return
+    if (conn.fileLogging) {
+      conn.fileLogging = false
+    } else {
+      conn.fileLogging = true
+      conn.logStart    = conn.log.length  // capture only data from this moment on
+    }
   },
 
   appendLog(id: string, entry: LogEntry) {

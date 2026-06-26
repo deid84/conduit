@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { store } from '$lib/stores/connections.svelte'
+  import { store, exportLog } from '$lib/stores/connections.svelte'
   import { sendData } from '$lib/api'
   import { cn } from '$lib/utils'
 
@@ -12,7 +12,13 @@
   let lineEnd: LineEnd = $state('lf')
   let input:   string  = $state('')
 
-  const termMode = $derived(store.active?.terminalMode ?? 'line')
+  const termMode   = $derived(store.active?.terminalMode ?? 'line')
+  const logActive  = $derived(store.active?.fileLogging ?? false)
+  const hasLogData = $derived(
+    store.active !== null &&
+    store.active.logStart >= 0 &&
+    store.active.log.length > store.active.logStart
+  )
 
   // Valid when hex mode has at least one complete byte pair
   const hexValid = $derived(mode === 'hex' && /^([0-9a-fA-F]{2}\s*)+$/.test(input.trim()))
@@ -157,6 +163,36 @@
       >{m.toUpperCase()}</button>
     {/each}
   </div>
+
+  <!-- REC: start/stop session log recording -->
+  <button
+    class={cn(
+      'flex items-center gap-1.5 rounded border px-2 py-1.5 text-xs font-medium transition-colors disabled:opacity-40',
+      logActive
+        ? 'border-red-500/70 text-red-500'
+        : 'border-border text-muted-foreground hover:text-foreground'
+    )}
+    title={logActive ? 'Stop recording' : 'Start recording session to file'}
+    onclick={() => store.activeId && store.toggleFileLog(store.activeId)}
+    disabled={!store.active}
+  >
+    <span class={cn('size-2 shrink-0 rounded-full', logActive ? 'bg-red-500 animate-pulse' : 'bg-muted-foreground')}></span>
+    REC
+  </button>
+
+  <!-- Export: download recorded log -->
+  {#if hasLogData}
+    <button
+      class="rounded border border-border px-2 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+      title="Download session log"
+      onclick={() => store.active && exportLog(store.active)}
+    >
+      <svg class="size-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M8 2v9M5 8l3 3 3-3"/>
+        <line x1="2" y1="13" x2="14" y2="13"/>
+      </svg>
+    </button>
+  {/if}
 
   <button
     class="rounded border border-destructive/50 px-2 py-1.5 text-xs text-destructive transition-colors hover:bg-destructive hover:text-white disabled:opacity-40"
