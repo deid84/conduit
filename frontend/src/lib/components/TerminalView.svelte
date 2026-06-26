@@ -4,6 +4,7 @@
   import { WebLinksAddon } from '@xterm/addon-web-links'
   import type { IDisposable, ITheme } from '@xterm/xterm'
   import type { Connection, LogEntry } from '$lib/stores/connections.svelte'
+  import { store } from '$lib/stores/connections.svelte'
   import { sendData } from '$lib/api'
   import { themeStore, effectiveTheme } from '$lib/stores/theme.svelte'
   import '@xterm/xterm/css/xterm.css'
@@ -62,16 +63,24 @@
 
   let container = $state<HTMLDivElement | null>(null)
   let term      = $state<Terminal | null>(null)
-  let written   = 0  // local counter — not reactive, just a cursor into connection.log
+  let written   = 0       // cursor into connection.log — not reactive
+  let lastViewMode: 'ascii' | 'hex' = 'ascii'
 
-  function writeEntry(t: Terminal, entry: LogEntry) {
+  function formatHex(raw: number[]): string {
+    return raw.map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' ')
+  }
+
+  function writeEntry(t: Terminal, entry: LogEntry, viewMode: 'ascii' | 'hex') {
     if (entry.direction === 'tx') t.write('\x1b[36m')
-    t.write(new Uint8Array(entry.raw))
+    if (viewMode === 'hex') {
+      t.write(formatHex(entry.raw) + '\r\n')
+    } else {
+      t.write(new Uint8Array(entry.raw))
+    }
     if (entry.direction === 'tx') t.write('\x1b[0m')
   }
 
-  // Effect 1: create the terminal once the container div is in the DOM.
-  // disableStdin starts true; Effect 3 enables it in raw mode.
+  // Effect 1: create/destroy terminal when container mounts.
   $effect(() => {
     if (!container) return
 
@@ -87,7 +96,7 @@
       theme:        effectiveTheme() === 'dark' ? THEME_MOCHA : THEME_LATTE,
     })
 
-    const fitAddon  = new FitAddon()
+    const fitAddon   = new FitAddon()
     const linksAddon = new WebLinksAddon()
     t.loadAddon(fitAddon)
     t.loadAddon(linksAddon)
@@ -97,6 +106,7 @@
     const ro = new ResizeObserver(() => fitAddon.fit())
     ro.observe(container)
 
+    lastViewMode = connection.viewMode
     term = t
 
     return () => {
@@ -107,25 +117,31 @@
     }
   })
 
-  // Effect 2: write new log entries as they arrive.
+  // Effect 2: write new log entries; clear+rewrite when view mode changes.
   $effect(() => {
     if (!term) return
-    const len = connection.log.length  // tracked — re-runs when log grows
-    const t   = term
+    const viewMode = connection.viewMode   // tracked
+    const len      = connection.log.length // tracked
+    const t        = term
+
+    if (viewMode !== lastViewMode) {
+      t.clear()
+      written      = 0
+      lastViewMode = viewMode
+    }
+
     for (; written < len; written++) {
-      writeEntry(t, connection.log[written])
+      writeEntry(t, connection.log[written], viewMode)
     }
   })
 
-  // Effect 3: raw mode — forward keystrokes directly to the device.
+  // Effect 3: raw mode — forward keystrokes to device.
   $effect(() => {
-    const mode = connection.terminalMode  // tracked
-    const t    = term                     // tracked
-
+    const mode = connection.terminalMode
+    const t    = term
     if (!t) return
 
     let listener: IDisposable | null = null
-
     if (mode === 'raw') {
       t.options.disableStdin = false
       const id = connection.id
@@ -139,19 +155,31 @@
     return () => { listener?.dispose() }
   })
 
-  // Effect 4: sync xterm theme when user changes light/dark/system preference.
+  // Effect 4: sync xterm palette when light/dark/system preference changes.
   const xtermTheme = $derived(effectiveTheme() === 'dark' ? THEME_MOCHA : THEME_LATTE)
 
   $effect(() => {
-    const theme = xtermTheme  // tracked via $derived
+    const theme = xtermTheme
     const t     = term
     if (!t) return
     t.options.theme = theme
   })
 </script>
 
-<div
-  bind:this={container}
-  class="flex-1 overflow-hidden"
-  style="background-color: {xtermTheme.background}"
-></div>
+<div class="relative flex-1 overflow-hidden" style="background-color: {xtermTheme.background}">
+  <!-- xterm container -->
+  <div bind:this={container} class="absolute inset-0"></div>
+
+  <!-- HEX / ASCII toggle — top-right overlay -->
+  <div class="absolute right-2 top-1 z-10 flex rounded border border-border/60 bg-background/80 text-[10px] backdrop-blur-sm">
+    {#each (['ascii', 'hex'] as const) as m}
+      <button
+        class="px-2 py-0.5 font-mono font-medium transition-colors {connection.viewMode === m
+          ? 'bg-muted text-foreground'
+          : 'text-muted-foreground hover:text-foreground'}"
+        title="{m === 'hex' ? 'Hex view' : 'ASCII view'}"
+        onclick={() => store.setViewMode(connection.id, m)}
+      >{m.toUpperCase()}</button>
+    {/each}
+  </div>
+</div>

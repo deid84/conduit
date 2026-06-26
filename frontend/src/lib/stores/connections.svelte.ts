@@ -41,6 +41,7 @@ export interface Connection {
   rxBytes: number
   txBytes: number
   terminalMode: 'line' | 'raw'
+  viewMode: 'ascii' | 'hex'
 }
 
 function makeLabel(conn: ConnConfig): string {
@@ -89,6 +90,7 @@ export async function connect(config: ConnConfig): Promise<void> {
     rxBytes:      0,
     txBytes:      0,
     terminalMode: 'line',
+    viewMode:     'ascii',
   })
   store.activeId    = id
   store.newConnOpen = false
@@ -134,6 +136,11 @@ export const store = $state({
   setTerminalMode(id: string, mode: 'line' | 'raw') {
     const conn = this.connections.find(c => c.id === id)
     if (conn) conn.terminalMode = mode
+  },
+
+  setViewMode(id: string, mode: 'ascii' | 'hex') {
+    const conn = this.connections.find(c => c.id === id)
+    if (conn) conn.viewMode = mode
   },
 
   appendLog(id: string, entry: LogEntry) {
