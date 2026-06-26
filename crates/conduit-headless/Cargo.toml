@@ -15,7 +15,8 @@ path = "src/lib.rs"
 conduit-core = { path = "../conduit-core" }
 tokio.workspace = true
 axum.workspace = true
-tower-http = { version = "0.6", features = ["cors"] }
+tower-http = { version = "0.6", features = ["cors", "fs"] }
+dotenvy = "0.15"
 serde.workspace = true
 serde_json.workspace = true
 tracing.workspace = true

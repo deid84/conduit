@@ -17,7 +17,9 @@ pub fn run() {
                 let listener = tokio::net::TcpListener::from_std(std_listener)
                     .expect("failed to convert TcpListener");
                 let st = state::AppState::new();
-                let router = routes::router(st);
+                // In Tauri mode the WebView serves the frontend directly;
+                // pass an empty path so ServeDir is never actually hit.
+                let router = routes::router(st, std::path::PathBuf::new());
                 axum::serve(listener, router)
                     .await
                     .expect("Axum server error");
