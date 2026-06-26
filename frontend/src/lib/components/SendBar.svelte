@@ -70,13 +70,13 @@
 <div class="flex shrink-0 items-center gap-2 border-t border-border bg-background px-3 py-2">
   <!-- LINE / RAW terminal mode toggle — disabled entirely in HEX input mode -->
   <div
-    class="flex rounded border border-border text-[10px]"
+    class="flex rounded border border-border text-xs"
     title={mode === 'hex' ? 'Switch to TEXT input to change terminal mode' : undefined}
   >
     {#each (['line', 'raw'] as const) as m}
       <button
         class={cn(
-          'px-2 py-1 font-medium transition-colors',
+          'px-2 py-1.5 font-medium transition-colors',
           termMode === m ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'
         )}
         title={m === 'raw' ? 'Raw mode: keystrokes go to device directly' : 'Line mode: compose and send lines'}
@@ -88,11 +88,11 @@
 
   {#if termMode === 'line'}
     <!-- TEXT / HEX input mode toggle -->
-    <div class="flex rounded border border-border text-[10px]">
+    <div class="flex rounded border border-border text-xs">
       {#each (['text', 'hex'] as Mode[]) as m}
         <button
           class={cn(
-            'px-2 py-1 font-medium transition-colors',
+            'px-2 py-1.5 font-medium transition-colors',
             mode === m ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'
           )}
           onclick={() => { mode = m; input = '' }}
@@ -102,7 +102,7 @@
 
     {#if mode === 'text'}
       <select
-        class="rounded border border-border bg-background px-1.5 py-1 text-[10px] text-muted-foreground focus:border-primary/60 focus:outline-none"
+        class="rounded border border-border bg-background px-1.5 py-1.5 text-xs text-muted-foreground focus:border-primary/60 focus:outline-none"
         bind:value={lineEnd}
       >
         {#each LINE_END_OPTS as opt}
@@ -145,11 +145,11 @@
   {/if}
 
   <!-- VIEW toggle: always visible, controls how received data is displayed -->
-  <div class="ml-auto flex rounded border border-border text-[10px]" title="Terminal display mode">
+  <div class="ml-auto flex rounded border border-border text-xs" title="Terminal display mode">
     {#each (['ascii', 'hex'] as const) as m}
       <button
         class={cn(
-          'px-2 py-1 font-mono font-medium transition-colors',
+          'px-2 py-1.5 font-mono font-medium transition-colors',
           viewMode === m ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'
         )}
         onclick={() => store.activeId && store.setViewMode(store.activeId, m)}
