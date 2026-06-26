@@ -42,10 +42,11 @@ export interface Connection {
   txBytes: number
   terminalMode: 'line' | 'raw'
   viewMode: 'ascii' | 'hex'
-  fileLogging: boolean
-  logStart:    number         // log index when recording started; -1 = never recorded
+  fileLogging:  boolean
+  logStart:     number        // log index when recording started; -1 = never recorded
+  logFilename:  string        // chosen filename (used for fallback download)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  fileHandle:  any | null     // FileSystemFileHandle when File System Access API is available
+  fileHandle:   any | null    // FileSystemFileHandle when File System Access API is available
 }
 
 function makeLabel(conn: ConnConfig): string {
@@ -97,6 +98,7 @@ export async function connect(config: ConnConfig): Promise<void> {
     viewMode:     'ascii',
     fileLogging:  false,
     logStart:     -1,
+    logFilename:  '',
     fileHandle:   null,
   })
   store.activeId    = id
@@ -140,12 +142,12 @@ function buildLogContent(conn: Connection, entries: LogEntry[]): string {
   return header + lines.join('\n')
 }
 
-function fallbackDownload(content: string, label: string): void {
+function fallbackDownload(content: string, filename: string): void {
   const blob = new Blob([content], { type: 'text/plain;charset=utf-8' })
   const url  = URL.createObjectURL(blob)
   const a    = document.createElement('a')
   a.href     = url
-  a.download = `conduit-${label.replace(/[^a-zA-Z0-9._-]/g, '_')}-${Date.now()}.log`
+  a.download = filename
   document.body.appendChild(a)
   a.click()
   document.body.removeChild(a)
@@ -174,18 +176,32 @@ export async function startFileLog(id: string): Promise<void> {
   }
 
   conn.fileHandle  = handle
+  conn.logFilename = handle ? '' : ''   // filename set by caller for fallback path
+  conn.fileLogging = true
+  conn.logStart    = conn.log.length
+}
+
+// Used when File System Access API is unavailable: starts recording and
+// stores the user-supplied filename for download on stop.
+export function startFileLogFallback(id: string, filename: string): void {
+  const conn = store.connections.find(c => c.id === id)
+  if (!conn || conn.fileLogging) return
+  conn.fileHandle  = null
+  conn.logFilename = filename
   conn.fileLogging = true
   conn.logStart    = conn.log.length
 }
 
 // Stops recording and writes the log to the chosen file (or triggers a
-// browser download if the File System Access API was not available).
+// browser download when the File System Access API was not available).
 export async function stopAndSaveLog(conn: Connection): Promise<void> {
-  const handle  = conn.fileHandle
-  const entries = conn.logStart >= 0 ? conn.log.slice(conn.logStart) : []
+  const handle   = conn.fileHandle
+  const filename = conn.logFilename
+  const entries  = conn.logStart >= 0 ? conn.log.slice(conn.logStart) : []
 
   conn.fileLogging = false
   conn.fileHandle  = null
+  conn.logFilename = ''
 
   if (entries.length === 0) return
   const content = buildLogContent(conn, entries)
@@ -196,10 +212,10 @@ export async function stopAndSaveLog(conn: Connection): Promise<void> {
       await writable.write(content)
       await writable.close()
     } catch {
-      fallbackDownload(content, conn.label)
+      fallbackDownload(content, filename || `conduit-${conn.label.replace(/[^a-zA-Z0-9._-]/g, '_')}.log`)
     }
   } else {
-    fallbackDownload(content, conn.label)
+    fallbackDownload(content, filename || `conduit-${conn.label.replace(/[^a-zA-Z0-9._-]/g, '_')}.log`)
   }
 }
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { store, startFileLog, stopAndSaveLog } from '$lib/stores/connections.svelte'
+  import { store, startFileLog, startFileLogFallback, stopAndSaveLog } from '$lib/stores/connections.svelte'
   import { sendData } from '$lib/api'
   import { cn } from '$lib/utils'
 
@@ -12,8 +12,40 @@
   let lineEnd: LineEnd = $state('lf')
   let input:   string  = $state('')
 
-  const termMode   = $derived(store.active?.terminalMode ?? 'line')
+  const termMode  = $derived(store.active?.terminalMode ?? 'line')
   const logActive = $derived(store.active?.fileLogging ?? false)
+
+  // Fallback dialog (shown when File System Access API is unavailable)
+  let recDialogOpen = $state(false)
+  let recFilename   = $state('')
+
+  function defaultFilename(): string {
+    const conn = store.active
+    if (!conn) return 'conduit.log'
+    const safe = conn.label.replace(/[^a-zA-Z0-9._-]/g, '_')
+    const date = new Date().toISOString().slice(0, 10)
+    return `conduit-${safe}-${date}.log`
+  }
+
+  function clickRec() {
+    if (logActive) {
+      store.active && void stopAndSaveLog(store.active)
+      return
+    }
+    if (!store.activeId) return
+    if ('showSaveFilePicker' in window) {
+      void startFileLog(store.activeId)
+    } else {
+      recFilename   = defaultFilename()
+      recDialogOpen = true
+    }
+  }
+
+  function confirmRec() {
+    recDialogOpen = false
+    if (!store.activeId || !recFilename.trim()) return
+    startFileLogFallback(store.activeId, recFilename.trim())
+  }
 
   // Valid when hex mode has at least one complete byte pair
   const hexValid = $derived(mode === 'hex' && /^([0-9a-fA-F]{2}\s*)+$/.test(input.trim()))
@@ -168,13 +200,7 @@
         : 'border-border text-muted-foreground hover:text-foreground'
     )}
     title={logActive ? 'Stop recording and save file' : 'Start recording — choose where to save'}
-    onclick={() => {
-      if (logActive) {
-        store.active && void stopAndSaveLog(store.active)
-      } else {
-        store.activeId && void startFileLog(store.activeId)
-      }
-    }}
+    onclick={clickRec}
     disabled={!store.active}
   >
     <span class={cn('size-2 shrink-0 rounded-full', logActive ? 'bg-red-500 animate-pulse' : 'bg-muted-foreground')}></span>
@@ -188,3 +214,47 @@
     disabled={!store.active}
   >Clear</button>
 </div>
+
+<!-- Fallback dialog: shown when showSaveFilePicker is not available (Firefox, WebKitGTK) -->
+{#if recDialogOpen}
+  <div
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+    onclick={() => recDialogOpen = false}
+    role="dialog"
+    aria-modal="true"
+  >
+    <div
+      class="flex w-80 flex-col gap-3 rounded-lg border border-border bg-background p-4 shadow-xl"
+      onclick={(e) => e.stopPropagation()}
+    >
+      <p class="text-sm font-semibold text-foreground">Start session recording</p>
+
+      <div class="flex flex-col gap-1">
+        <label class="text-xs text-muted-foreground" for="rec-filename">File name</label>
+        <input
+          id="rec-filename"
+          class="rounded border border-border bg-input px-2 py-1.5 font-mono text-xs text-foreground focus:border-primary/60 focus:outline-none"
+          bind:value={recFilename}
+          onkeydown={(e) => { if (e.key === 'Enter') confirmRec(); if (e.key === 'Escape') recDialogOpen = false }}
+          spellcheck={false}
+          autocomplete="off"
+        />
+        <p class="text-[10px] text-muted-foreground/60">Saved to the browser's Downloads folder on stop</p>
+      </div>
+
+      <div class="flex justify-end gap-2">
+        <button
+          class="rounded border border-border px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+          onclick={() => recDialogOpen = false}
+        >Cancel</button>
+        <button
+          class="flex items-center gap-1.5 rounded bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+          onclick={confirmRec}
+        >
+          <span class="size-1.5 rounded-full bg-red-500"></span>
+          Start REC
+        </button>
+      </div>
+    </div>
+  </div>
+{/if}
