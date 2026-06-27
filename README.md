@@ -3,6 +3,8 @@
   <img alt="Conduit" src="logo.png">
 </picture>
 
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-deid84-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/deid84)
+
 A serial/TCP/UDP monitor and protocol gateway — alternative to Hercules.
 
 Runs in two modes:
