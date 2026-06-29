@@ -4,6 +4,7 @@
 </picture>
 
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-deid84-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/deid84)
+[![License](https://img.shields.io/badge/license-MIT%20%7C%20Apache--2.0-blue?style=for-the-badge)](LICENSE-MIT)
 
 A serial/TCP/UDP monitor and protocol gateway — alternative to Hercules.
 
