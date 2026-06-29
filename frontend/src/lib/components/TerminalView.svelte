@@ -67,16 +67,32 @@
   let lastViewMode: 'ascii' | 'hex' = connection.viewMode
 
   // Context menu state
-  let ctxVisible = $state(false)
-  let ctxX       = $state(0)
-  let ctxY       = $state(0)
+  let ctxVisible      = $state(false)
+  let ctxX            = $state(0)
+  let ctxY            = $state(0)
+  let ctxHasSelection = $state(false)
 
   function showCtxMenu(e: MouseEvent) {
     e.preventDefault()
+    ctxHasSelection = !!(term?.getSelection())
     // Clamp so the menu doesn't overflow the viewport
-    ctxX = Math.min(e.clientX, window.innerWidth  - 160)
-    ctxY = Math.min(e.clientY, window.innerHeight - 80)
+    ctxX = Math.min(e.clientX, window.innerWidth  - 168)
+    ctxY = Math.min(e.clientY, window.innerHeight - 96)
     ctxVisible = true
+  }
+
+  async function copySelection() {
+    const sel = term?.getSelection() ?? ''
+    if (sel) await navigator.clipboard.writeText(sel).catch(() => {})
+    ctxVisible = false
+  }
+
+  async function pasteFromClipboard() {
+    try {
+      const text = await navigator.clipboard.readText()
+      if (text) await sendData(connection.id, new TextEncoder().encode(text))
+    } catch { /* clipboard permission denied */ }
+    ctxVisible = false
   }
 
   function clearAndClose() {
@@ -135,6 +151,33 @@
     ro.observe(container)
 
     container.addEventListener('contextmenu', showCtxMenu)
+
+    // Keyboard copy/paste — intercepted before xterm processes the event.
+    t.attachCustomKeyEventHandler((e: KeyboardEvent) => {
+      if (e.type !== 'keydown') return true
+      const ctrl = e.ctrlKey || e.metaKey
+
+      // Copy: Ctrl/Cmd+C when text is selected (Ctrl+C without selection in raw mode
+      // must fall through so xterm can send the 0x03 interrupt byte).
+      if (ctrl && e.key.toLowerCase() === 'c') {
+        const sel = t.getSelection()
+        if (sel) {
+          navigator.clipboard.writeText(sel).catch(() => {})
+          return false   // eat the event; don't send 0x03
+        }
+        return connection.terminalMode === 'raw'  // let raw-mode Ctrl+C through
+      }
+
+      // Paste: Ctrl/Cmd+V — sends clipboard content to the device.
+      if (ctrl && e.key.toLowerCase() === 'v') {
+        navigator.clipboard.readText()
+          .then(text => { if (text) sendData(connection.id, new TextEncoder().encode(text)) })
+          .catch(() => {})
+        return false
+      }
+
+      return true
+    })
 
     term = t
 
@@ -203,12 +246,47 @@
   <!-- position:fixed escapes overflow:hidden; pointerdown stopPropagation prevents the
        window listener from firing immediately and closing the menu on the same event. -->
   <div
-    class="fixed z-50 min-w-36 overflow-hidden rounded border border-border bg-background py-1 shadow-lg text-xs"
+    class="fixed z-50 min-w-40 overflow-hidden rounded border border-border bg-background py-1 shadow-lg text-xs"
     style="left: {ctxX}px; top: {ctxY}px"
     onpointerdown={(e) => e.stopPropagation()}
   >
+    <!-- Copy -->
     <button
-      class="flex w-full items-center gap-2 px-3 py-1.5 text-left text-foreground hover:bg-muted"
+      class="flex w-full items-center justify-between gap-3 px-3 py-1.5 text-left transition-colors
+             {ctxHasSelection ? 'text-foreground hover:bg-muted' : 'cursor-default text-muted-foreground/40'}"
+      onclick={copySelection}
+      disabled={!ctxHasSelection}
+    >
+      <span class="flex items-center gap-2">
+        <svg class="size-3.5 shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+          <rect x="5" y="5" width="8" height="9" rx="1"/>
+          <path d="M3 11V3a1 1 0 0 1 1-1h8" stroke-linecap="round"/>
+        </svg>
+        Copy
+      </span>
+      <span class="text-[10px] text-muted-foreground/60">Ctrl+C</span>
+    </button>
+
+    <!-- Paste -->
+    <button
+      class="flex w-full items-center justify-between gap-3 px-3 py-1.5 text-left text-foreground transition-colors hover:bg-muted"
+      onclick={pasteFromClipboard}
+    >
+      <span class="flex items-center gap-2">
+        <svg class="size-3.5 shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M6 3h4M5 3a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4a1 1 0 0 0-1-1" stroke-linecap="round"/>
+          <path d="M6 3V2h4v1" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Paste
+      </span>
+      <span class="text-[10px] text-muted-foreground/60">Ctrl+V</span>
+    </button>
+
+    <div class="my-1 border-t border-border"></div>
+
+    <!-- Clear -->
+    <button
+      class="flex w-full items-center gap-2 px-3 py-1.5 text-left text-foreground transition-colors hover:bg-muted"
       onclick={clearAndClose}
     >
       <svg class="size-3.5 shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
