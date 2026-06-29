@@ -2,6 +2,7 @@
   import { connect } from '$lib/stores/connections.svelte'
   import type { ConnConfig, SerialConfig, TcpConfig, UdpConfig } from '$lib/stores/connections.svelte'
   import { listPorts } from '$lib/api'
+  import { profileStore } from '$lib/stores/profiles.svelte'
   import { cn } from '$lib/utils'
 
   type Protocol = 'serial' | 'tcp' | 'udp'
@@ -62,6 +63,39 @@
   const INPUT_CLS  = 'w-full rounded border border-border bg-muted/20 px-2 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/50 focus:border-primary/60 focus:outline-none'
   const SELECT_CLS = 'w-full rounded border border-border bg-muted/20 pl-2 pr-6 py-1.5 text-xs text-foreground focus:border-primary/60 focus:outline-none'
   const LABEL_CLS  = 'mb-1 block text-[11px] text-muted-foreground'
+
+  let selectedProfileId = $state<string>('')
+  let savingName        = $state<string | null>(null)  // null = not saving; string = name being typed
+
+  function currentConfig(): ConnConfig {
+    switch (proto) {
+      case 'serial': return { type: 'serial', config: { ...serial } }
+      case 'tcp':    return { type: 'tcp',    config: { ...tcp    } }
+      case 'udp':    return { type: 'udp',    config: { ...udp    } }
+    }
+  }
+
+  function loadProfile() {
+    const p = profileStore.profiles.find(p => p.id === selectedProfileId)
+    if (!p) return
+    proto = p.config.type
+    if (p.config.type === 'serial') serial = { ...p.config.config }
+    if (p.config.type === 'tcp')    tcp    = { ...p.config.config }
+    if (p.config.type === 'udp')    udp    = { ...p.config.config }
+  }
+
+  function saveProfile() {
+    const name = (savingName ?? '').trim()
+    if (name) profileStore.add(name, currentConfig())
+    savingName = null
+  }
+
+  function deleteSelectedProfile() {
+    if (selectedProfileId) {
+      profileStore.remove(selectedProfileId)
+      selectedProfileId = ''
+    }
+  }
 </script>
 
 <div class="flex flex-1 items-center justify-center overflow-hidden bg-background p-8">
@@ -69,6 +103,54 @@
     <h2 class="mb-5 text-sm font-semibold uppercase tracking-widest text-foreground">
       New Connection
     </h2>
+
+    <!-- Profiles -->
+    {#if savingName !== null}
+      <div class="mb-4 flex gap-1">
+        <input
+          class={cn(INPUT_CLS, 'flex-1')}
+          placeholder="Profile name…"
+          bind:value={savingName}
+          onkeydown={(e) => { if (e.key === 'Enter') saveProfile(); if (e.key === 'Escape') savingName = null }}
+          autofocus
+        />
+        <button
+          class="rounded border border-border px-2.5 py-1.5 text-[11px] text-foreground hover:bg-muted/40 transition-colors"
+          onclick={saveProfile}
+        >Save</button>
+        <button
+          class="rounded border border-border px-2.5 py-1.5 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+          onclick={() => savingName = null}
+        >✕</button>
+      </div>
+    {:else}
+      <div class="mb-4 flex gap-1">
+        <select
+          class={cn(SELECT_CLS, 'flex-1')}
+          bind:value={selectedProfileId}
+        >
+          <option value="">— no profile —</option>
+          {#each profileStore.profiles as p}
+            <option value={p.id}>{p.name}</option>
+          {/each}
+        </select>
+        <button
+          class="rounded border border-border px-2.5 py-1.5 text-[11px] text-foreground hover:bg-muted/40 transition-colors disabled:opacity-40"
+          disabled={!selectedProfileId}
+          onclick={loadProfile}
+        >Load</button>
+        <button
+          class="rounded border border-border px-2.5 py-1.5 text-[11px] text-foreground hover:bg-muted/40 transition-colors"
+          onclick={() => savingName = ''}
+        >Save…</button>
+        {#if selectedProfileId}
+          <button
+            class="rounded border border-border px-2.5 py-1.5 text-[11px] text-red-400 hover:text-red-300 transition-colors"
+            onclick={deleteSelectedProfile}
+          >✕</button>
+        {/if}
+      </div>
+    {/if}
 
     <!-- Protocol selector -->
     <div class="mb-6 flex gap-1 rounded-md border border-border bg-muted/30 p-1">

@@ -1,4 +1,13 @@
-import { WS_BASE, openConnection, closeConnection } from '$lib/api'
+import { WS_BASE, openConnection, closeConnection, setDtr, setRts } from '$lib/api'
+
+export interface SignalState {
+  cd:  boolean
+  dsr: boolean
+  cts: boolean
+  ri:  boolean
+  dtr: boolean
+  rts: boolean
+}
 
 export type ConnectionStatus = 'idle' | 'connecting' | 'connected' | 'error' | 'disconnected'
 
@@ -47,6 +56,7 @@ export interface Connection {
   logFilename:  string        // chosen filename (used for fallback download)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   fileHandle:   any | null    // FileSystemFileHandle when File System Access API is available
+  signals: SignalState
 }
 
 function makeLabel(conn: ConnConfig): string {
@@ -72,8 +82,9 @@ function openStream(id: string) {
       })
     } else {
       try {
-        const msg = JSON.parse(e.data as string) as { type?: string }
-        if (msg.type === 'closed') store.setStatus(id, 'disconnected')
+        const msg = JSON.parse(e.data as string) as { type?: string; data?: SignalState }
+        if (msg.type === 'closed')  store.setStatus(id, 'disconnected')
+        if (msg.type === 'signals' && msg.data) store.setSignals(id, msg.data)
       } catch { /* ignore non-JSON text frames */ }
     }
   }
@@ -100,6 +111,7 @@ export async function connect(config: ConnConfig): Promise<void> {
     logStart:     -1,
     logFilename:  '',
     fileHandle:   null,
+    signals: { cd: false, dsr: false, cts: false, ri: false, dtr: false, rts: false },
   })
   store.activeId    = id
   store.newConnOpen = false
@@ -269,5 +281,26 @@ export const store = $state({
     conn.log.push(entry)
     if (entry.direction === 'rx') conn.rxBytes += entry.raw.length
     else                          conn.txBytes += entry.raw.length
+  },
+
+  setSignals(id: string, signals: SignalState) {
+    const conn = this.connections.find(c => c.id === id)
+    if (conn) conn.signals = signals
+  },
+
+  async toggleDtr(id: string) {
+    const conn = this.connections.find(c => c.id === id)
+    if (!conn) return
+    const next = !conn.signals.dtr
+    conn.signals = { ...conn.signals, dtr: next }
+    await setDtr(id, next)
+  },
+
+  async toggleRts(id: string) {
+    const conn = this.connections.find(c => c.id === id)
+    if (!conn) return
+    const next = !conn.signals.rts
+    conn.signals = { ...conn.signals, rts: next }
+    await setRts(id, next)
   },
 })

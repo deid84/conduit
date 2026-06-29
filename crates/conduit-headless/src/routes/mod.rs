@@ -9,6 +9,7 @@ use crate::state::AppState;
 
 mod connections;
 mod ports;
+mod signals;
 mod stream;
 
 pub fn router(state: AppState, static_dir: PathBuf) -> Router {
@@ -21,6 +22,9 @@ pub fn router(state: AppState, static_dir: PathBuf) -> Router {
         .route("/api/connections/{id}", delete(connections::close))
         .route("/api/connections/{id}/send", post(connections::send))
         .route("/api/connections/{id}/stream", get(stream::handler))
+        .route("/api/connections/{id}/signals", get(signals::get_signals))
+        .route("/api/connections/{id}/dtr", post(signals::set_dtr))
+        .route("/api/connections/{id}/rts", post(signals::set_rts))
         .fallback_service(serve)
         .layer(CorsLayer::permissive())
         .with_state(state)

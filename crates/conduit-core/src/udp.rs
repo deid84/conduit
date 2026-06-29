@@ -1,9 +1,9 @@
-use crate::connection::{Connection, ConnectionKind};
+use crate::connection::{Connection, ConnectionKind, SignalState};
 use anyhow::{Context, Result};
 use bytes::Bytes;
 use serde::{Deserialize, Serialize};
 use tokio::net::UdpSocket;
-use tokio::sync::{broadcast, mpsc};
+use tokio::sync::{broadcast, mpsc, watch};
 use tracing::{error, info};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -27,6 +27,7 @@ pub async fn bind(config: UdpConfig) -> Result<Connection> {
     let socket = std::sync::Arc::new(socket);
     let (inbound_tx, _) = broadcast::channel(256);
     let (outbound_tx, mut outbound_rx) = mpsc::channel::<Bytes>(64);
+    let (signals_tx, _) = watch::channel(SignalState::default());
 
     let inbound_tx_clone = inbound_tx.clone();
     let reader_socket = socket.clone();
@@ -65,6 +66,8 @@ pub async fn bind(config: UdpConfig) -> Result<Connection> {
         ConnectionKind::Udp,
         inbound_tx,
         outbound_tx,
+        signals_tx,
+        None,
         vec![reader_task, writer_task],
     ))
 }

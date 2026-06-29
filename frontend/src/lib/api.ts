@@ -51,7 +51,7 @@ export async function sendData(id: string, data: Uint8Array): Promise<void> {
   await fetch(`${BASE_URL}/api/connections/${id}/send`, {
     method:  'POST',
     headers: { 'Content-Type': 'application/octet-stream' },
-    body:    new Blob([data]),
+    body:    data as unknown as BodyInit,
   })
 }
 
@@ -59,4 +59,20 @@ export async function listPorts(): Promise<Array<{ name: string }>> {
   const res = await fetch(`${BASE_URL}/api/ports`)
   if (!res.ok) throw new Error(`list ports failed (${res.status})`)
   return res.json()
+}
+
+export async function setDtr(id: string, value: boolean): Promise<void> {
+  await fetch(`${BASE_URL}/api/connections/${id}/dtr`, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ value }),
+  })
+}
+
+export async function setRts(id: string, value: boolean): Promise<void> {
+  await fetch(`${BASE_URL}/api/connections/${id}/rts`, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ value }),
+  })
 }
