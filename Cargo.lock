@@ -393,21 +393,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "conduit-core"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "bytes",
- "serde",
- "serialport",
- "tokio",
- "tokio-serial",
- "tracing",
- "uuid",
-]
-
-[[package]]
-name = "conduit-headless"
+name = "conduit-api"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -424,12 +410,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "conduit-core"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bytes",
+ "serde",
+ "serialport",
+ "tokio",
+ "tokio-serial",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "conduit-tauri"
 version = "0.1.0"
 dependencies = [
  "anyhow",
  "axum",
- "conduit-headless",
+ "conduit-api",
  "tauri",
  "tauri-build",
  "tokio",

@@ -3,6 +3,10 @@ name = "conduit-tauri"
 version.workspace = true
 edition.workspace = true
 
+[[bin]]
+name = "conduit"
+path = "src/main.rs"
+
 [lib]
 name = "conduit_tauri_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
@@ -11,7 +15,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-conduit-headless = { path = "../conduit-headless" }
+conduit-api = { path = "../conduit-api" }
 tauri = { version = "2", features = [] }
 tokio.workspace = true
 axum.workspace = true

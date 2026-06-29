@@ -1,4 +1,4 @@
-use conduit_headless::{routes, state};
+use conduit_api::{routes, state};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
