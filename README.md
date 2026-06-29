@@ -10,7 +10,7 @@ A serial/TCP/UDP monitor and protocol gateway — alternative to Hercules.
 
 Runs in two modes:
 - **GUI** — desktop app (Tauri + Svelte 5) for interactive monitoring
-- **Headless** — REST + WebSocket API gateway (Axum) for scripting and automation
+- **API** — REST + WebSocket gateway (Axum) for scripting and automation, with embedded web UI
 
 ## Prerequisites
 
@@ -39,13 +39,13 @@ cargo tauri dev
 
 Tauri starts the Vite dev server automatically and opens the app window.
 
-### Headless gateway (Axum REST + WebSocket + UI)
+### API gateway (Axum REST + WebSocket + UI)
 
 Build the frontend first, then start the server:
 
 ```sh
 cd frontend && npm run build && cd ..
-cargo run -p conduit-headless
+cargo run --bin conduit-api
 # Listening on 0.0.0.0:3000
 # Open http://localhost:3000 in a browser
 ```
@@ -55,11 +55,11 @@ fallback for client-side routing. To override the path:
 
 ```sh
 # via environment variable
-CONDUIT_STATIC_DIR=/path/to/dist cargo run -p conduit-headless
+CONDUIT_STATIC_DIR=/path/to/dist cargo run --bin conduit-api
 
 # or via .env file in the working directory
 echo 'CONDUIT_STATIC_DIR=/path/to/dist' > .env
-cargo run -p conduit-headless
+cargo run --bin conduit-api
 ```
 
 ### Frontend only (Vite dev server)
@@ -77,8 +77,8 @@ npm run dev
 cd crates/conduit-tauri
 cargo tauri build
 
-# Headless — optimized binary
-cargo build --release -p conduit-headless
+# API gateway — optimized binary
+cargo build --bin conduit-api --release
 ```
 
 ## Workspace structure
@@ -86,10 +86,10 @@ cargo build --release -p conduit-headless
 ```
 conduit/
 ├── crates/
-│   ├── conduit-core/       # transport logic: serial, TCP, UDP
-│   ├── conduit-headless/   # Axum REST + WebSocket gateway
-│   └── conduit-tauri/      # Tauri desktop app
-└── frontend/               # Svelte 5 + Vite
+│   ├── conduit-core/   # transport logic: serial, TCP, UDP
+│   ├── conduit-api/    # Axum REST + WebSocket gateway (binary: conduit-api)
+│   └── conduit-tauri/  # Tauri desktop app (binary: conduit)
+└── frontend/           # Svelte 5 + Vite
 ```
 
 ## License
