@@ -46,8 +46,8 @@ pub async fn open(
         OpenRequest::Udp(cfg) => udp::bind(cfg).await,
     }
     .map_err(|e| {
-        tracing::error!("open connection: {e:#}");
-        (StatusCode::INTERNAL_SERVER_ERROR, format!("{e:#}"))
+        tracing::warn!("open connection failed: {e:#}");
+        (StatusCode::UNPROCESSABLE_ENTITY, format!("{e:#}"))
     })?;
 
     let info = ConnectionInfo {

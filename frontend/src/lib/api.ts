@@ -38,6 +38,8 @@ export async function openConnection(config: ConnConfig): Promise<{ id: string }
   })
   if (!res.ok) {
     const text = await res.text().catch(() => '')
+    // 422 = transport-level failure (connection refused, port not found, etc.) — show only the message
+    if (res.status === 422 && text) throw new Error(text)
     throw new Error(`open connection failed (${res.status})${text ? ': ' + text : ''}`)
   }
   return res.json()
