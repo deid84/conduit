@@ -1,11 +1,11 @@
 <script lang="ts">
   import { connect } from '$lib/stores/connections.svelte'
-  import type { ConnConfig, SerialConfig, TcpConfig, UdpConfig } from '$lib/stores/connections.svelte'
+  import type { ConnConfig, SerialConfig, TcpConfig, TcpServerConfig, UdpConfig } from '$lib/stores/connections.svelte'
   import { listPorts } from '$lib/api'
   import { profileStore } from '$lib/stores/profiles.svelte'
   import { cn } from '$lib/utils'
 
-  type Protocol = 'serial' | 'tcp' | 'udp'
+  type Protocol = 'serial' | 'tcp' | 'tcp_server' | 'udp'
   let proto = $state<Protocol>('serial')
 
   let serial = $state<SerialConfig>({
@@ -17,8 +17,9 @@
     flow_control: 'none',
   })
 
-  let tcp = $state<TcpConfig>({ host: '127.0.0.1', port: 3000 })
-  let udp = $state<UdpConfig>({ bind: '0.0.0.0:0', remote: '127.0.0.1:5005' })
+  let tcp       = $state<TcpConfig>      ({ host: '127.0.0.1', port: 3000 })
+  let tcpServer = $state<TcpServerConfig>({ bind: '0.0.0.0',   port: 9000 })
+  let udp       = $state<UdpConfig>      ({ bind: '0.0.0.0:0', remote: '127.0.0.1:5005' })
 
   let ports   = $state<string[]>([])
   let loading = $state(false)
@@ -42,9 +43,10 @@
     try {
       let config: ConnConfig
       switch (proto) {
-        case 'serial': config = { type: 'serial', config: { ...serial } }; break
-        case 'tcp':    config = { type: 'tcp',    config: { ...tcp    } }; break
-        case 'udp':    config = { type: 'udp',    config: { ...udp    } }; break
+        case 'serial':     config = { type: 'serial',     config: { ...serial    } }; break
+        case 'tcp':        config = { type: 'tcp',        config: { ...tcp       } }; break
+        case 'tcp_server': config = { type: 'tcp_server', config: { ...tcpServer } }; break
+        case 'udp':        config = { type: 'udp',        config: { ...udp       } }; break
       }
       await connect(config)
     } catch (e) {
@@ -55,9 +57,10 @@
   }
 
   const PROTO_TABS: { id: Protocol; label: string }[] = [
-    { id: 'serial', label: 'Serial' },
-    { id: 'tcp',    label: 'TCP'    },
-    { id: 'udp',    label: 'UDP'    },
+    { id: 'serial',     label: 'Serial'     },
+    { id: 'tcp',        label: 'TCP'        },
+    { id: 'tcp_server', label: 'TCP Server' },
+    { id: 'udp',        label: 'UDP'        },
   ]
 
   const INPUT_CLS  = 'w-full rounded border border-border bg-muted/20 px-2 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/50 focus:border-primary/60 focus:outline-none'
@@ -69,9 +72,10 @@
 
   function currentConfig(): ConnConfig {
     switch (proto) {
-      case 'serial': return { type: 'serial', config: { ...serial } }
-      case 'tcp':    return { type: 'tcp',    config: { ...tcp    } }
-      case 'udp':    return { type: 'udp',    config: { ...udp    } }
+      case 'serial':     return { type: 'serial',     config: { ...serial    } }
+      case 'tcp':        return { type: 'tcp',        config: { ...tcp       } }
+      case 'tcp_server': return { type: 'tcp_server', config: { ...tcpServer } }
+      case 'udp':        return { type: 'udp',        config: { ...udp       } }
     }
   }
 
@@ -79,9 +83,10 @@
     const p = profileStore.profiles.find(p => p.id === selectedProfileId)
     if (!p) return
     proto = p.config.type
-    if (p.config.type === 'serial') serial = { ...p.config.config }
-    if (p.config.type === 'tcp')    tcp    = { ...p.config.config }
-    if (p.config.type === 'udp')    udp    = { ...p.config.config }
+    if (p.config.type === 'serial')     serial    = { ...p.config.config }
+    if (p.config.type === 'tcp')        tcp       = { ...p.config.config }
+    if (p.config.type === 'tcp_server') tcpServer = { ...p.config.config }
+    if (p.config.type === 'udp')        udp       = { ...p.config.config }
   }
 
   function saveProfile() {
@@ -249,6 +254,23 @@
         </div>
       </div>
 
+    {:else if proto === 'tcp_server'}
+      <div class="space-y-3">
+        <p class="rounded border border-border bg-muted/20 px-3 py-2 text-[11px] text-muted-foreground">
+          Conduit apre una porta e attende che un client si connetta. Il tab diventa attivo appena arriva la connessione.
+        </p>
+        <div class="flex gap-2">
+          <div class="flex-1">
+            <label for="ts-bind" class={LABEL_CLS}>Bind address</label>
+            <input id="ts-bind" class={INPUT_CLS} bind:value={tcpServer.bind} placeholder="0.0.0.0" />
+          </div>
+          <div>
+            <label for="ts-port" class={LABEL_CLS}>Port</label>
+            <input id="ts-port" type="number" class={INPUT_CLS.replace('w-full', 'w-24')} bind:value={tcpServer.port} min="1" max="65535" />
+          </div>
+        </div>
+      </div>
+
     {:else}
       <div class="space-y-3">
         <div>
@@ -270,6 +292,6 @@
       class="mt-6 w-full rounded bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground transition-opacity hover:opacity-90 active:opacity-75 disabled:cursor-not-allowed disabled:opacity-40"
       disabled={loading || (proto === 'serial' && !serial.port.trim())}
       onclick={doConnect}
-    >{loading ? 'Connecting…' : 'Connect'}</button>
+    >{loading && proto === 'tcp_server' ? 'Waiting for client…' : loading ? 'Connecting…' : proto === 'tcp_server' ? 'Listen' : 'Connect'}</button>
   </div>
 </div>

@@ -30,10 +30,16 @@ export interface UdpConfig {
   remote: string
 }
 
+export interface TcpServerConfig {
+  bind: string
+  port: number
+}
+
 export type ConnConfig =
-  | { type: 'serial'; config: SerialConfig }
-  | { type: 'tcp';    config: TcpConfig }
-  | { type: 'udp';    config: UdpConfig }
+  | { type: 'serial';     config: SerialConfig }
+  | { type: 'tcp';        config: TcpConfig }
+  | { type: 'tcp_server'; config: TcpServerConfig }
+  | { type: 'udp';        config: UdpConfig }
 
 export interface LogEntry {
   ts: number
@@ -61,9 +67,10 @@ export interface Connection {
 
 function makeLabel(conn: ConnConfig): string {
   switch (conn.type) {
-    case 'serial': return `${conn.config.port} · ${conn.config.baud_rate}`
-    case 'tcp':    return `${conn.config.host}:${conn.config.port}`
-    case 'udp':    return `UDP ${conn.config.remote}`
+    case 'serial':     return `${conn.config.port} · ${conn.config.baud_rate}`
+    case 'tcp':        return `${conn.config.host}:${conn.config.port}`
+    case 'tcp_server': return `TCP :${conn.config.port}`
+    case 'udp':        return `UDP ${conn.config.remote}`
   }
 }
 

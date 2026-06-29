@@ -14,6 +14,7 @@ use crate::state::AppState;
 pub enum OpenRequest {
     Serial(serial::SerialConfig),
     Tcp(tcp::TcpConfig),
+    TcpServer(tcp::TcpServerConfig),
     Udp(udp::UdpConfig),
 }
 
@@ -41,9 +42,10 @@ pub async fn open(
     Json(req): Json<OpenRequest>,
 ) -> Result<(StatusCode, Json<ConnectionInfo>), (StatusCode, String)> {
     let conn = match req {
-        OpenRequest::Serial(cfg) => serial::open(cfg),
-        OpenRequest::Tcp(cfg) => tcp::connect(cfg).await,
-        OpenRequest::Udp(cfg) => udp::bind(cfg).await,
+        OpenRequest::Serial(cfg)    => serial::open(cfg),
+        OpenRequest::Tcp(cfg)       => tcp::connect(cfg).await,
+        OpenRequest::TcpServer(cfg) => tcp::listen(cfg).await,
+        OpenRequest::Udp(cfg)       => udp::bind(cfg).await,
     }
     .map_err(|e| {
         tracing::warn!("open connection failed: {e:#}");

@@ -28,6 +28,8 @@
       }
       case 'tcp':
         return `${c.config.host}:${c.config.port}`
+      case 'tcp_server':
+        return `listening on ${c.config.bind}:${c.config.port}`
       case 'udp':
         return `bind ${c.config.bind}  →  ${c.config.remote}`
     }
