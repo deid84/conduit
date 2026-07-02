@@ -1,4 +1,4 @@
-import { WS_BASE, openConnection, closeConnection, setDtr, setRts } from '$lib/api'
+import { WS_BASE, openConnection, closeConnection, setDtr, setRts, setModbusMode } from '$lib/api'
 
 export interface SignalState {
   cd:  boolean
@@ -47,6 +47,34 @@ export interface LogEntry {
   raw: number[]
 }
 
+// ── Modbus ────────────────────────────────────────────────────────────────────
+
+export type ModbusMode = 'rtu' | 'ascii' | 'tcp'
+
+export type ModbusPdu =
+  | { type: 'read_bits';                    fc: number; start: number; count: number }
+  | { type: 'read_words';                   fc: number; start: number; count: number }
+  | { type: 'read_bits_response';           fc: number; values: boolean[] }
+  | { type: 'read_words_response';          fc: number; values: number[] }
+  | { type: 'write_single_coil';            address: number; on: boolean }
+  | { type: 'write_single_register';        address: number; value: number }
+  | { type: 'write_multiple_coils';         address: number; count: number; values: boolean[] }
+  | { type: 'write_multiple_registers';     address: number; count: number; values: number[] }
+  | { type: 'write_multiple_response';      fc: number; address: number; count: number }
+  | { type: 'read_write_multiple';          read_address: number; read_count: number; write_address: number; write_values: number[] }
+  | { type: 'read_write_multiple_response'; values: number[] }
+  | { type: 'exception';                    function_code: number; exception_code: number }
+  | { type: 'unknown';                      function_code: number; data: number[] }
+
+export interface ModbusFrame {
+  ts:             number
+  direction:      'rx' | 'tx'
+  mode:           ModbusMode
+  unit_id:        number
+  transaction_id: number | null
+  pdu:            ModbusPdu
+}
+
 export interface Connection {
   id: string
   label: string
@@ -63,6 +91,8 @@ export interface Connection {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   fileHandle:   any | null    // FileSystemFileHandle when File System Access API is available
   signals: SignalState
+  modbusMode:   ModbusMode | null
+  modbusFrames: ModbusFrame[]
 }
 
 function makeLabel(conn: ConnConfig): string {
@@ -89,9 +119,10 @@ function openStream(id: string) {
       })
     } else {
       try {
-        const msg = JSON.parse(e.data as string) as { type?: string; data?: SignalState }
+        const msg = JSON.parse(e.data as string) as { type?: string; data?: SignalState; frame?: ModbusFrame }
         if (msg.type === 'closed')  store.setStatus(id, 'disconnected')
         if (msg.type === 'signals' && msg.data) store.setSignals(id, msg.data)
+        if (msg.type === 'modbus'  && msg.frame) store.appendModbusFrame(id, { ...msg.frame, ts: Date.now(), direction: 'rx' })
       } catch { /* ignore non-JSON text frames */ }
     }
   }
@@ -118,7 +149,9 @@ export async function connect(config: ConnConfig): Promise<void> {
     logStart:     -1,
     logFilename:  '',
     fileHandle:   null,
-    signals: { cd: false, dsr: false, cts: false, ri: false, dtr: false, rts: false },
+    signals:      { cd: false, dsr: false, cts: false, ri: false, dtr: false, rts: false },
+    modbusMode:   null,
+    modbusFrames: [],
   })
   store.activeId    = id
   store.newConnOpen = false
@@ -309,5 +342,22 @@ export const store = $state({
     const next = !conn.signals.rts
     conn.signals = { ...conn.signals, rts: next }
     await setRts(id, next)
+  },
+
+  async setModbusMode(id: string, mode: ModbusMode | null) {
+    const conn = this.connections.find(c => c.id === id)
+    if (!conn) return
+    conn.modbusMode = mode
+    if (!mode) conn.modbusFrames = []
+    await setModbusMode(id, mode)
+  },
+
+  appendModbusFrame(id: string, frame: ModbusFrame) {
+    const conn = this.connections.find(c => c.id === id)
+    if (conn) conn.modbusFrames.push(frame)
+  },
+
+  appendModbusTxFrame(id: string, frame: Omit<ModbusFrame, 'ts' | 'direction'>) {
+    this.appendModbusFrame(id, { ...frame, ts: Date.now(), direction: 'tx' })
   },
 })

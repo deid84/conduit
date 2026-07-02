@@ -78,3 +78,24 @@ export async function setRts(id: string, value: boolean): Promise<void> {
     body:    JSON.stringify({ value }),
   })
 }
+
+export async function setModbusMode(id: string, mode: 'rtu' | 'ascii' | 'tcp' | null): Promise<void> {
+  await fetch(`${BASE_URL}/api/connections/${id}/modbus/mode`, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ mode }),
+  })
+}
+
+export async function sendModbus(
+  id: string,
+  unit_id: number,
+  pdu: unknown,
+  transaction_id?: number,
+): Promise<void> {
+  await fetch(`${BASE_URL}/api/connections/${id}/modbus/send`, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ unit_id, pdu, transaction_id: transaction_id ?? null }),
+  })
+}
