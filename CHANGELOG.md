@@ -2,6 +2,44 @@
 # Changelog
 
 All notable changes to Conduit.
+## [0.2.0] — 2026-07-02
+
+### Bug Fixes
+- **api**: Return 422 instead of 500 for transport-level connection failures
+- **serial**: Release port on close; fix(api): timeout on send
+- **modbus**: Timeout on send; add settings bar with timeout/retries
+- **style**: Apply dark background to system-dark media query block
+
+
+### CI/CD
+- Add Tauri release workflow for Linux, Windows, macOS universal
+- Add libudev-dev to Linux build dependencies
+
+
+### Chore
+- Add cliff.toml and generate CHANGELOG.md for v0.1.0
+- Bump version to 0.2.0
+
+
+### Documentation
+- Align landing page palette with app colors (Cinder/Bone/Amber)
+- Add app icon to nav and as favicon
+- Use high-res icon.png for favicon and navbar logo
+
+
+### Features
+- **tcp-server**: Add TCP listener mode
+- **tauri**: Add --serve / -s flag for headless API mode
+- **core**: Add Modbus RTU/ASCII/TCP parser and encoder
+- **api**: Expose Modbus mode and send endpoints, overlay parsed frames on WS stream
+- **modbus**: UI panel with frame log and request builder
+- **modbus**: Move protocol selection into NewConnection form
+- **modbus**: Display formats, byte/word swap, FC15/FC16 multi-value input
+
+
+### Styling
+- Darken background color in dark theme and docs page
+
 ## [0.1.0] — 2026-06-29
 
 ### Bug Fixes
