@@ -41,6 +41,25 @@ export type ConnConfig =
   | { type: 'tcp_server'; config: TcpServerConfig }
   | { type: 'udp';        config: UdpConfig }
 
+export type DisplayFormat = 'hex' | 'uint16' | 'int16' | 'uint32' | 'int32' | 'float32' | 'string'
+export type MonitorRowStatus = 'idle' | 'pending' | 'ok' | 'error' | 'timeout'
+
+export interface MonitorRow {
+  id:            string
+  label:         string
+  fc:            1 | 2 | 3 | 4
+  unitId:        number
+  address:       number
+  count:         number
+  displayFormat: DisplayFormat
+  swapBytes:     boolean
+  swapWords:     boolean
+  values:        number[] | boolean[] | null
+  status:        MonitorRowStatus
+  lastTs:        number | null
+  errorMsg:      string | null
+}
+
 export interface LogEntry {
   ts: number
   direction: 'rx' | 'tx'
@@ -93,6 +112,9 @@ export interface Connection {
   signals: SignalState
   modbusMode:   ModbusMode | null
   modbusFrames: ModbusFrame[]
+  monitorRows:  MonitorRow[]
+  pollInterval: number
+  pollRunning:  boolean
 }
 
 function makeLabel(conn: ConnConfig): string {
@@ -152,6 +174,9 @@ export async function connect(config: ConnConfig, modbusMode?: ModbusMode): Prom
     signals:      { cd: false, dsr: false, cts: false, ri: false, dtr: false, rts: false },
     modbusMode:   modbusMode ?? null,
     modbusFrames: [],
+    monitorRows:  [],
+    pollInterval: 1000,
+    pollRunning:  false,
   })
   store.activeId    = id
   store.newConnOpen = false
@@ -365,5 +390,32 @@ export const store = $state({
     if (!conn) return
     conn.modbusFrames.push({ ...frame, ts: Date.now(), direction: 'tx' })
     if (txByteCount > 0) conn.txBytes += txByteCount
+  },
+
+  addMonitorRow(id: string) {
+    const conn = this.connections.find(c => c.id === id)
+    if (!conn) return
+    conn.monitorRows.push({
+      id:            crypto.randomUUID(),
+      label:         '',
+      fc:            3,
+      unitId:        1,
+      address:       0,
+      count:         10,
+      displayFormat: 'hex',
+      swapBytes:     false,
+      swapWords:     false,
+      values:        null,
+      status:        'idle',
+      lastTs:        null,
+      errorMsg:      null,
+    })
+  },
+
+  deleteMonitorRow(connId: string, rowId: string) {
+    const conn = this.connections.find(c => c.id === connId)
+    if (!conn) return
+    const idx = conn.monitorRows.findIndex(r => r.id === rowId)
+    if (idx !== -1) conn.monitorRows.splice(idx, 1)
   },
 })

@@ -28,6 +28,7 @@ pub fn router(state: AppState, static_dir: PathBuf) -> Router {
         .route("/api/connections/{id}/rts", post(signals::set_rts))
         .route("/api/connections/{id}/modbus/mode", post(modbus::set_mode))
         .route("/api/connections/{id}/modbus/send", post(modbus::send))
+        .route("/api/connections/{id}/modbus/read", post(modbus::read))
         .fallback_service(serve)
         .layer(CorsLayer::permissive())
         .with_state(state)

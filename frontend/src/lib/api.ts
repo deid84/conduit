@@ -87,6 +87,22 @@ export async function setModbusMode(id: string, mode: 'rtu' | 'ascii' | 'tcp' | 
   })
 }
 
+export async function readModbus(
+  id: string,
+  unit_id: number,
+  pdu: unknown,
+  transaction_id?: number,
+  timeout_ms?: number,
+): Promise<{ pdu: unknown }> {
+  const res = await fetch(`${BASE_URL}/api/connections/${id}/modbus/read`, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ unit_id, pdu, transaction_id: transaction_id ?? null, timeout_ms }),
+  })
+  if (!res.ok) throw new Error(`read failed (${res.status})`)
+  return res.json()
+}
+
 export async function sendModbus(
   id: string,
   unit_id: number,

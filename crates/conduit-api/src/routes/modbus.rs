@@ -9,7 +9,8 @@ use conduit_core::{
     connection::ConnectionId,
     modbus::{self, ascii, rtu, tcp as modbus_tcp, Mode, Pdu},
 };
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
+use tokio::sync::broadcast;
 
 use crate::state::AppState;
 
@@ -86,6 +87,113 @@ pub async fn send(
         Ok(Ok(())) => StatusCode::NO_CONTENT,
         Ok(Err(_)) => StatusCode::GONE,
         Err(_)     => StatusCode::REQUEST_TIMEOUT,
+    }
+}
+
+// ── Synchronous read (send + await response) ──────────────────────────────────
+
+#[derive(Deserialize)]
+pub struct ReadRequest {
+    pub unit_id:        u8,
+    pub transaction_id: Option<u16>,
+    pub pdu:            Pdu,
+    pub timeout_ms:     Option<u64>,
+}
+
+#[derive(Serialize)]
+pub struct ReadResponse {
+    pub pdu: Pdu,
+}
+
+/// `POST /api/connections/{id}/modbus/read`
+///
+/// Encodes `pdu`, sends it, then waits up to `timeout_ms` (default 1000) for
+/// a decoded response frame on the inbound channel. Returns the response PDU
+/// as JSON on success, `408` on timeout, `410` if the connection closed.
+///
+/// For RTU/ASCII the first valid non-request frame after sending is returned.
+/// For TCP frames are additionally filtered by `transaction_id`.
+/// Echo frames (ReadBits/ReadWords variants) are skipped automatically so
+/// half-duplex RS-485 hardware echo does not confuse the matcher.
+pub async fn read(
+    Path(id): Path<String>,
+    State(state): State<AppState>,
+    Json(req): Json<ReadRequest>,
+) -> Result<Json<ReadResponse>, StatusCode> {
+    let id = match id.parse::<ConnectionId>() {
+        Ok(id) => id,
+        Err(_) => return Err(StatusCode::BAD_REQUEST),
+    };
+
+    let (outbound, mut rx, mode) = {
+        let conns = state.connections.read().await;
+        match conns.get(&id) {
+            Some(c) => (c.outbound.clone(), c.subscribe(), c.modbus_mode),
+            None    => return Err(StatusCode::NOT_FOUND),
+        }
+    };
+
+    let mode = match mode {
+        Some(m) => m,
+        None    => return Err(StatusCode::UNPROCESSABLE_ENTITY),
+    };
+
+    let timeout_ms = req.timeout_ms.unwrap_or(1000);
+    let tx_id      = req.transaction_id.unwrap_or(0);
+    let frame_bytes = encode_frame(mode, req.unit_id, tx_id, &req.pdu);
+
+    // Send the request frame.
+    match tokio::time::timeout(
+        Duration::from_secs(5),
+        outbound.send(Bytes::from(frame_bytes)),
+    ).await {
+        Ok(Ok(())) => {}
+        Ok(Err(_)) => return Err(StatusCode::GONE),
+        Err(_)     => return Err(StatusCode::REQUEST_TIMEOUT),
+    }
+
+    // Wait for a matching response.
+    let result = tokio::time::timeout(
+        Duration::from_millis(timeout_ms),
+        async {
+            let mut buf = Vec::<u8>::new();
+            loop {
+                match rx.recv().await {
+                    Ok(chunk) => {
+                        buf.extend_from_slice(&chunk);
+                        // Try to drain all decodable frames from the buffer.
+                        loop {
+                            match try_decode(mode, &buf) {
+                                Some((frame, n)) => {
+                                    buf.drain(..n);
+                                    // For TCP, filter by transaction_id.
+                                    if matches!(mode, Mode::Tcp) {
+                                        if frame.transaction_id != req.transaction_id {
+                                            continue;
+                                        }
+                                    }
+                                    // Skip echoed request frames (half-duplex RS-485).
+                                    match &frame.pdu {
+                                        Pdu::ReadBits  { .. } |
+                                        Pdu::ReadWords { .. } => continue,
+                                        _ => return Ok(frame.pdu),
+                                    }
+                                }
+                                None => break, // need more data
+                            }
+                        }
+                    }
+                    Err(broadcast::error::RecvError::Lagged(_)) => continue,
+                    Err(broadcast::error::RecvError::Closed)    => return Err(()),
+                }
+            }
+        },
+    ).await;
+
+    match result {
+        Ok(Ok(pdu)) => Ok(Json(ReadResponse { pdu })),
+        Ok(Err(())) => Err(StatusCode::GONE),
+        Err(_)      => Err(StatusCode::REQUEST_TIMEOUT),
     }
 }
 
