@@ -4,6 +4,7 @@ use axum::{
     Json,
 };
 use bytes::Bytes;
+use std::time::Duration;
 use conduit_core::{
     connection::ConnectionId,
     modbus::{self, ascii, rtu, tcp as modbus_tcp, Mode, Pdu},
@@ -81,10 +82,10 @@ pub async fn send(
 
     let frame_bytes = encode_frame(mode, req.unit_id, req.transaction_id.unwrap_or(0), &req.pdu);
 
-    if outbound.send(Bytes::from(frame_bytes)).await.is_ok() {
-        StatusCode::NO_CONTENT
-    } else {
-        StatusCode::GONE
+    match tokio::time::timeout(Duration::from_secs(5), outbound.send(Bytes::from(frame_bytes))).await {
+        Ok(Ok(())) => StatusCode::NO_CONTENT,
+        Ok(Err(_)) => StatusCode::GONE,
+        Err(_)     => StatusCode::REQUEST_TIMEOUT,
     }
 }
 

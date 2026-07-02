@@ -92,10 +92,13 @@ export async function sendModbus(
   unit_id: number,
   pdu: unknown,
   transaction_id?: number,
+  signal?: AbortSignal,
 ): Promise<void> {
-  await fetch(`${BASE_URL}/api/connections/${id}/modbus/send`, {
+  const res = await fetch(`${BASE_URL}/api/connections/${id}/modbus/send`, {
     method:  'POST',
     headers: { 'Content-Type': 'application/json' },
     body:    JSON.stringify({ unit_id, pdu, transaction_id: transaction_id ?? null }),
+    signal,
   })
+  if (!res.ok) throw new Error(`send failed (${res.status})`)
 }

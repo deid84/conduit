@@ -6,6 +6,11 @@
 
   let { connection }: { connection: Connection } = $props()
 
+  // ── Connection settings ────────────────────────────────────────────────────
+  let timeoutMs  = $state(1000)   // per-attempt timeout
+  let retryCount = $state(3)      // max retries after first failure
+  let sendError  = $state<string | null>(null)
+
   // ── Request builder state ──────────────────────────────────────────────────
   let unitId  = $state(1)
   let fc      = $state(3)         // default: Read Holding Registers
@@ -46,20 +51,37 @@
   }
 
   async function sendRequest() {
-    sending = true
-    try {
-      const pdu = buildPdu(fc)
-      const tid = connection.modbusMode === 'tcp' ? txId++ : undefined
-      await sendModbus(connection.id, unitId, pdu, tid)
-      store.appendModbusTxFrame(connection.id, {
-        mode:           connection.modbusMode!,
-        unit_id:        unitId,
-        transaction_id: tid ?? null,
-        pdu,
-      })
-    } catch { /* ignore send errors */ } finally {
-      sending = false
+    sending  = true
+    sendError = null
+    const pdu = buildPdu(fc)
+
+    let lastErr = ''
+    const maxAttempts = 1 + Math.max(0, retryCount)
+
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      const ac    = new AbortController()
+      const timer = setTimeout(() => ac.abort(), timeoutMs)
+      try {
+        const tid = connection.modbusMode === 'tcp' ? txId : undefined
+        await sendModbus(connection.id, unitId, pdu, tid, ac.signal)
+        if (connection.modbusMode === 'tcp') txId++
+        store.appendModbusTxFrame(connection.id, {
+          mode:           connection.modbusMode!,
+          unit_id:        unitId,
+          transaction_id: tid ?? null,
+          pdu,
+        })
+        lastErr = ''
+        break  // success — stop retrying
+      } catch (e) {
+        lastErr = e instanceof Error ? e.message : String(e)
+      } finally {
+        clearTimeout(timer)
+      }
     }
+
+    if (lastErr) sendError = lastErr
+    sending = false
   }
 
   // ── Frame display helpers ──────────────────────────────────────────────────
@@ -124,6 +146,37 @@
 </script>
 
 <div class="flex flex-1 flex-col overflow-hidden">
+
+  <!-- Connection settings bar -->
+  <div class="flex shrink-0 items-center gap-4 border-b border-border bg-muted/10 px-3 py-1.5 text-[11px]">
+    <span class="text-muted-foreground">Timeout</span>
+    <div class="flex items-center gap-1">
+      <input
+        type="number"
+        min="100"
+        max="60000"
+        step="100"
+        class="{INPUT_CLS} w-20 py-0.5 text-center"
+        bind:value={timeoutMs}
+      />
+      <span class="text-muted-foreground">ms</span>
+    </div>
+
+    <span class="h-3 w-px bg-border"></span>
+
+    <span class="text-muted-foreground">Retries</span>
+    <input
+      type="number"
+      min="0"
+      max="10"
+      class="{INPUT_CLS} w-12 py-0.5 text-center"
+      bind:value={retryCount}
+    />
+
+    {#if sendError}
+      <span class="ml-2 text-red-400">{sendError}</span>
+    {/if}
+  </div>
 
   <!-- Request builder -->
   <div class="shrink-0 border-b border-border bg-muted/5 px-3 py-2">
