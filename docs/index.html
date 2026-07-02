@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Conduit — Serial/TCP/UDP Monitor &amp; Modbus Gateway</title>
+  <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAD5klEQVR42sVXT2gcVRj/vTdvsnF3sttkV5KmKXhSsQeligeFYkUjCnpYFEoPsRWknrxJ8WRqezOevPRQPHhQpBKwYgWFHgQ9iAX/gEiRmlq7LSXpNt10N8nMe8/vezNTkmZ2E3A2fbC7s8Ob9/vN9/u+33ufQjwUfaLx8aGqNP47sKhbiAeEgI8chrUIBewcBGaNDD9oNFoLKaZIL3aNDb8orPhESlmzxIAeynXQyxC+gDFm3go7deVa8xvGZgJgcE94Z61jayP68fiZfCmAl9dCCAeqrX6JSQgXdj3wp5CiloAr9HdETMIaO2+81Ye9Sil4j8I+uU3gPCSTkFIEsNIyYN262Liwb9fwEsy64myPr3PXvGdOcpIzNieE3y1rPSlcNWhj+8OCsFU38NXIYqkT0QyB8n2xOv3gIbPAV0KLieoAPjy0G689NYJbHYP2qoHyRO46qYywINIWM69P4Jmnh4ElTSSGcezzBn75u4MdJc8RyUsWmSUML32ro9kt0G5rPP94BefefwjTB3ZSXgA3b0cuP6TYks69y6EcFKc3sKKnzv3eQkAXTz5YcstEkcG+vRW8/FgFjWaIXy+13f1BX9J8IiPXfJL/ZDgUKVpPxmtmxUxMjFVtVh6wDC3Sft8jAY4dGMcTe4YQUTQ4/PAFzvzQxPHTV/HHvx0HmOW7DFodUmivGHev4IsNe0wmgbVluEigPoEefraKd+s7URnxsbIUoUALL94I8en3N9Ba1vDoAZsaCl3zCzD45KNlXF5Yxdun/sEVmj+g1pPoSuCORkTC2DgaoxWFo/UxHNpfo0oxbjE56PXchw29vaz4+OzsdRw5eQkjgVqXwBL3eKhe+/daCY5M1tZJMFhOJPh2fnMJLtzGzJfXUCxIF81NCaRJ2CQPuDsJQSEtFD2cIe2Pf0FJePn/JaHqBl4seDhxcBfeeK7mbqaJ9xeZ0TSZ0lc/33QlOEr6ukXFXejCpQBCsnQGFl2sPJPAMlnxybcm8Mr+KtoLIYrkfhzWGQL+6OvrTpbhkuLTE0Ld2xFlQsRuOQds/DJuAyLtixTu784vrrPiHSW1ZSvebNaGMkw3o921AbxJ4T9/sY3TPzbJgICASk5rizw3xa5OGG/Huu/bseriH85k7k8SrF8HEkeAEzXrVMTAkbZ9NSHG5kPXXFLGdhsN0MaNip1jK55Nzjl6GwnoBHP2njcmkhtFK8yUiD3c9Yl9ksOm4MJpYKYYm+tLtZaWLwRB4Sea8gJ1SQHyP3tyaVOQhbTUnBqYV9PmlAmYOyQq6mNul4jIKDUNZXrIy6s9p6+LtPAp44UHG1cXf0u78v8ASUHU41u1rGcAAAAASUVORK5CYII=">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -51,11 +52,20 @@
     }
 
     .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
       font-family: var(--font-mono);
       font-size: 1.15rem;
       font-weight: 700;
       color: var(--accent);
       letter-spacing: -0.5px;
+    }
+
+    .nav-brand img {
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
     }
 
     .nav-links {
@@ -333,7 +343,10 @@
 
 <!-- NAV -->
 <nav>
-  <span class="nav-brand">conduit</span>
+  <span class="nav-brand">
+    <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAD5klEQVR42sVXT2gcVRj/vTdvsnF3sttkV5KmKXhSsQeligeFYkUjCnpYFEoPsRWknrxJ8WRqezOevPRQPHhQpBKwYgWFHgQ9iAX/gEiRmlq7LSXpNt10N8nMe8/vezNTkmZ2E3A2fbC7s8Ob9/vN9/u+33ufQjwUfaLx8aGqNP47sKhbiAeEgI8chrUIBewcBGaNDD9oNFoLKaZIL3aNDb8orPhESlmzxIAeynXQyxC+gDFm3go7deVa8xvGZgJgcE94Z61jayP68fiZfCmAl9dCCAeqrX6JSQgXdj3wp5CiloAr9HdETMIaO2+81Ye9Sil4j8I+uU3gPCSTkFIEsNIyYN262Liwb9fwEsy64myPr3PXvGdOcpIzNieE3y1rPSlcNWhj+8OCsFU38NXIYqkT0QyB8n2xOv3gIbPAV0KLieoAPjy0G689NYJbHYP2qoHyRO46qYywINIWM69P4Jmnh4ElTSSGcezzBn75u4MdJc8RyUsWmSUML32ro9kt0G5rPP94BefefwjTB3ZSXgA3b0cuP6TYks69y6EcFKc3sKKnzv3eQkAXTz5YcstEkcG+vRW8/FgFjWaIXy+13f1BX9J8IiPXfJL/ZDgUKVpPxmtmxUxMjFVtVh6wDC3Sft8jAY4dGMcTe4YQUTQ4/PAFzvzQxPHTV/HHvx0HmOW7DFodUmivGHev4IsNe0wmgbVluEigPoEefraKd+s7URnxsbIUoUALL94I8en3N9Ba1vDoAZsaCl3zCzD45KNlXF5Yxdun/sEVmj+g1pPoSuCORkTC2DgaoxWFo/UxHNpfo0oxbjE56PXchw29vaz4+OzsdRw5eQkjgVqXwBL3eKhe+/daCY5M1tZJMFhOJPh2fnMJLtzGzJfXUCxIF81NCaRJ2CQPuDsJQSEtFD2cIe2Pf0FJePn/JaHqBl4seDhxcBfeeK7mbqaJ9xeZ0TSZ0lc/33QlOEr6ukXFXejCpQBCsnQGFl2sPJPAMlnxybcm8Mr+KtoLIYrkfhzWGQL+6OvrTpbhkuLTE0Ld2xFlQsRuOQds/DJuAyLtixTu784vrrPiHSW1ZSvebNaGMkw3o921AbxJ4T9/sY3TPzbJgICASk5rizw3xa5OGG/Huu/bseriH85k7k8SrF8HEkeAEzXrVMTAkbZ9NSHG5kPXXFLGdhsN0MaNip1jK55Nzjl6GwnoBHP2njcmkhtFK8yUiD3c9Yl9ksOm4MJpYKYYm+tLtZaWLwRB4Sea8gJ1SQHyP3tyaVOQhbTUnBqYV9PmlAmYOyQq6mNul4jIKDUNZXrIy6s9p6+LtPAp44UHG1cXf0u78v8ASUHU41u1rGcAAAAASUVORK5CYII=" alt="Conduit icon">
+    conduit
+  </span>
   <ul class="nav-links">
     <li><a href="#features">Features</a></li>
     <li><a href="#quickstart">Quick Start</a></li>
