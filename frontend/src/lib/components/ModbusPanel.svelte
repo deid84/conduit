@@ -458,11 +458,11 @@
       <table class="w-full border-collapse">
         <thead class="sticky top-0 bg-background text-[10px] text-muted-foreground">
           <tr>
-            <th class="px-3 py-1 text-left font-normal">Time</th>
-            <th class="px-2 py-1 text-left font-normal">Dir</th>
-            <th class="px-2 py-1 text-left font-normal">Unit</th>
-            <th class="px-2 py-1 text-left font-normal">Function</th>
-            <th class="px-3 py-1 text-left font-normal">Data</th>
+            <th class="w-px whitespace-nowrap px-4 py-1 text-left font-normal">Time</th>
+            <th class="w-px whitespace-nowrap px-6 py-1 text-left font-normal">Dir</th>
+            <th class="w-px whitespace-nowrap px-6 py-1 text-left font-normal">Unit</th>
+            <th class="w-px whitespace-nowrap px-6 py-1 text-left font-normal">Function</th>
+            <th class="px-6 py-1 text-left font-normal">Data</th>
           </tr>
         </thead>
         <tbody>
@@ -471,15 +471,15 @@
               'border-b border-border/30',
               frame.direction === 'tx' ? 'text-tx' : 'text-foreground'
             )}>
-              <td class="px-3 py-0.5 text-muted-foreground">{fmtTime(frame.ts)}</td>
-              <td class="px-2 py-0.5">
+              <td class="w-px whitespace-nowrap px-4 py-0.5 text-muted-foreground">{fmtTime(frame.ts)}</td>
+              <td class="w-px whitespace-nowrap px-6 py-0.5">
                 <span class={frame.direction === 'tx' ? 'text-tx' : 'text-rx'}>
                   {frame.direction === 'tx' ? '▲ TX' : '▼ RX'}
                 </span>
               </td>
-              <td class="px-2 py-0.5">{frame.unit_id}</td>
-              <td class="px-2 py-0.5 text-muted-foreground">{fcName(frame.pdu)}</td>
-              <td class="px-3 py-0.5 max-w-[40ch] truncate">{pduSummary(frame.pdu)}</td>
+              <td class="w-px whitespace-nowrap px-6 py-0.5">{frame.unit_id}</td>
+              <td class="w-px whitespace-nowrap px-6 py-0.5 text-muted-foreground">{fcName(frame.pdu)}</td>
+              <td class="max-w-0 truncate px-6 py-0.5">{pduSummary(frame.pdu)}</td>
             </tr>
           {/each}
         </tbody>
