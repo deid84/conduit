@@ -340,13 +340,13 @@
     </select>
 
     <label class="flex cursor-pointer items-center gap-1.5">
-      <input type="checkbox" class="h-3 w-3 accent-primary" bind:checked={swapBytes} />
+      <input type="checkbox" class="h-3 w-3" bind:checked={swapBytes} />
       <span class="text-muted-foreground">Swap bytes</span>
     </label>
 
     {#if is32bit}
       <label class="flex cursor-pointer items-center gap-1.5">
-        <input type="checkbox" class="h-3 w-3 accent-primary" bind:checked={swapWords} />
+        <input type="checkbox" class="h-3 w-3" bind:checked={swapWords} />
         <span class="text-muted-foreground">Swap words</span>
       </label>
     {/if}

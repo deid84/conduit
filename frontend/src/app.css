@@ -101,6 +101,29 @@
     }
   }
 
+  /* Custom checkbox — removes OS/WebKit native rendering that can appear black
+     on Linux (WebKitGTK) in light mode. Checked state uses primary (Amber). */
+  input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    flex-shrink: 0;
+    border-radius: 0.2rem;
+    border: 1.5px solid var(--border);
+    background: var(--input);
+    cursor: pointer;
+    display: inline-grid;
+    place-content: center;
+  }
+  input[type="checkbox"]:checked {
+    background: var(--primary);
+    border-color: var(--primary);
+    /* Graphite checkmark (#1C1813) on Amber background */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10' fill='none' stroke='%231C1813' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='1.5,5 4,7.5 8.5,2'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 0.65em;
+  }
+
   * {
     @apply border-border box-border;
   }
