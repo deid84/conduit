@@ -125,47 +125,8 @@
 
 <div class="flex flex-1 flex-col overflow-hidden">
 
-  <!-- Frame log -->
-  <div class="flex-1 overflow-y-auto font-mono text-[11px]">
-    {#if connection.modbusFrames.length === 0}
-      <div class="flex h-full items-center justify-center text-muted-foreground/50">
-        No frames yet
-      </div>
-    {:else}
-      <table class="w-full border-collapse">
-        <thead class="sticky top-0 bg-background text-[10px] text-muted-foreground">
-          <tr>
-            <th class="px-3 py-1 text-left font-normal">Time</th>
-            <th class="px-2 py-1 text-left font-normal">Dir</th>
-            <th class="px-2 py-1 text-left font-normal">Unit</th>
-            <th class="px-2 py-1 text-left font-normal">Function</th>
-            <th class="px-3 py-1 text-left font-normal">Data</th>
-          </tr>
-        </thead>
-        <tbody>
-          {#each connection.modbusFrames as frame (frame.ts + frame.direction + Math.random())}
-            <tr class={cn(
-              'border-b border-border/30',
-              frame.direction === 'tx' ? 'text-cyan-400' : 'text-foreground'
-            )}>
-              <td class="px-3 py-0.5 text-muted-foreground">{fmtTime(frame.ts)}</td>
-              <td class="px-2 py-0.5">
-                <span class={frame.direction === 'tx' ? 'text-cyan-400' : 'text-green-400'}>
-                  {frame.direction === 'tx' ? '▲ TX' : '▼ RX'}
-                </span>
-              </td>
-              <td class="px-2 py-0.5">{frame.unit_id}</td>
-              <td class="px-2 py-0.5 text-muted-foreground">{fcName(frame.pdu)}</td>
-              <td class="px-3 py-0.5 max-w-[40ch] truncate">{pduSummary(frame.pdu)}</td>
-            </tr>
-          {/each}
-        </tbody>
-      </table>
-    {/if}
-  </div>
-
   <!-- Request builder -->
-  <div class="shrink-0 border-t border-border bg-muted/5 px-3 py-2">
+  <div class="shrink-0 border-b border-border bg-muted/5 px-3 py-2">
     <div class="flex flex-wrap items-end gap-2">
 
       <!-- Unit ID -->
@@ -236,5 +197,44 @@
         Clear
       </button>
     </div>
+  </div>
+
+  <!-- Frame log -->
+  <div class="flex-1 overflow-y-auto font-mono text-[11px]">
+    {#if connection.modbusFrames.length === 0}
+      <div class="flex h-full items-center justify-center text-muted-foreground/50">
+        No frames yet
+      </div>
+    {:else}
+      <table class="w-full border-collapse">
+        <thead class="sticky top-0 bg-background text-[10px] text-muted-foreground">
+          <tr>
+            <th class="px-3 py-1 text-left font-normal">Time</th>
+            <th class="px-2 py-1 text-left font-normal">Dir</th>
+            <th class="px-2 py-1 text-left font-normal">Unit</th>
+            <th class="px-2 py-1 text-left font-normal">Function</th>
+            <th class="px-3 py-1 text-left font-normal">Data</th>
+          </tr>
+        </thead>
+        <tbody>
+          {#each connection.modbusFrames as frame (frame.ts + frame.direction + Math.random())}
+            <tr class={cn(
+              'border-b border-border/30',
+              frame.direction === 'tx' ? 'text-cyan-400' : 'text-foreground'
+            )}>
+              <td class="px-3 py-0.5 text-muted-foreground">{fmtTime(frame.ts)}</td>
+              <td class="px-2 py-0.5">
+                <span class={frame.direction === 'tx' ? 'text-cyan-400' : 'text-green-400'}>
+                  {frame.direction === 'tx' ? '▲ TX' : '▼ RX'}
+                </span>
+              </td>
+              <td class="px-2 py-0.5">{frame.unit_id}</td>
+              <td class="px-2 py-0.5 text-muted-foreground">{fcName(frame.pdu)}</td>
+              <td class="px-3 py-0.5 max-w-[40ch] truncate">{pduSummary(frame.pdu)}</td>
+            </tr>
+          {/each}
+        </tbody>
+      </table>
+    {/if}
   </div>
 </div>

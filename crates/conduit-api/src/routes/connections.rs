@@ -4,6 +4,7 @@ use axum::{
     http::StatusCode,
     Json,
 };
+use std::time::Duration;
 use conduit_core::{connection::ConnectionId, serial, tcp, udp, ConnectionKind};
 use serde::{Deserialize, Serialize};
 
@@ -95,9 +96,9 @@ pub async fn send(
         }
     };
 
-    if sender.send(body).await.is_ok() {
-        StatusCode::NO_CONTENT
-    } else {
-        StatusCode::GONE
+    match tokio::time::timeout(Duration::from_secs(5), sender.send(body)).await {
+        Ok(Ok(())) => StatusCode::NO_CONTENT,
+        Ok(Err(_)) => StatusCode::GONE,           // receiver dropped (connection dead)
+        Err(_)     => StatusCode::REQUEST_TIMEOUT, // channel full for > 5 s
     }
 }

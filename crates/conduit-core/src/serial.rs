@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use std::io::{Read, Write};
 use std::time::{Duration, Instant};
 use tokio::sync::{broadcast, mpsc, watch};
+use tokio::sync::mpsc::error::TryRecvError;
 use tracing::{error, info};
 
 // Box<dyn SerialPort> is not Send because the trait doesn't require it,
@@ -93,15 +94,22 @@ pub fn open(config: SerialConfig) -> Result<Connection> {
 
         loop {
             // Drain outbound data queue.
-            while let Ok(data) = outbound_rx.try_recv() {
-                if port.write_all(&data).is_err() { return; }
+            // Exit when the sender side is dropped (connection closed) so the port is released.
+            loop {
+                match outbound_rx.try_recv() {
+                    Ok(data)                        => { if port.write_all(&data).is_err() { return; } }
+                    Err(TryRecvError::Empty)        => break,
+                    Err(TryRecvError::Disconnected) => return,
+                }
             }
 
             // Drain signal command queue.
-            while let Ok(cmd) = signal_cmd_rx.try_recv() {
-                match cmd {
-                    SignalCmd::SetDtr(v) => { if port.write_data_terminal_ready(v).is_ok() { cur_dtr = v; } }
-                    SignalCmd::SetRts(v) => { if port.write_request_to_send(v).is_ok()     { cur_rts = v; } }
+            loop {
+                match signal_cmd_rx.try_recv() {
+                    Ok(SignalCmd::SetDtr(v)) => { if port.write_data_terminal_ready(v).is_ok() { cur_dtr = v; } }
+                    Ok(SignalCmd::SetRts(v)) => { if port.write_request_to_send(v).is_ok()     { cur_rts = v; } }
+                    Err(TryRecvError::Empty)        => break,
+                    Err(TryRecvError::Disconnected) => return,
                 }
             }
 
