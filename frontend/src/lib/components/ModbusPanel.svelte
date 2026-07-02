@@ -469,11 +469,11 @@
           {#each connection.modbusFrames as frame, i (i)}
             <tr class={cn(
               'border-b border-border/30',
-              frame.direction === 'tx' ? 'text-cyan-400' : 'text-foreground'
+              frame.direction === 'tx' ? 'text-tx' : 'text-foreground'
             )}>
               <td class="px-3 py-0.5 text-muted-foreground">{fmtTime(frame.ts)}</td>
               <td class="px-2 py-0.5">
-                <span class={frame.direction === 'tx' ? 'text-cyan-400' : 'text-green-400'}>
+                <span class={frame.direction === 'tx' ? 'text-tx' : 'text-rx'}>
                   {frame.direction === 'tx' ? '▲ TX' : '▼ RX'}
                 </span>
               </td>
