@@ -66,7 +66,7 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --background:         #252019;
+    --background:         #181310;
     --foreground:         #F4F1EB;
     --muted:              #332B22;
     --muted-foreground:   #9A8A78;
