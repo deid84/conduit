@@ -12,6 +12,25 @@ Runs in two modes:
 - **GUI** — desktop app (Tauri + Svelte 5) for interactive monitoring
 - **API** — REST + WebSocket gateway (Axum) for scripting and automation, with embedded web UI
 
+## Features
+
+- **Serial connections** — RS-232 and RS-485; configurable baud rate, data bits, parity, stop bits, flow control; DTR/RTS control
+- **TCP connections** — client mode and server (listener) mode
+- **UDP connections** — bind to a local port, send/receive datagrams
+- **Multi-tab UI** — open multiple connections simultaneously, each in its own tab
+- **Timestamped frame log** — every RX/TX frame is logged with direction and timestamp
+- **WebSocket live stream** — subscribe to `/api/connections/{id}/stream` for raw bytes and decoded frames in real time
+- **REST API** — open/close connections, send raw data, list serial ports, set DTR/RTS
+
+### Modbus
+
+- **Protocols**: Modbus RTU, ASCII, and TCP
+- **Request builder**: function codes FC01 (Read Coils), FC02 (Read Discrete Inputs), FC03 (Read Holding Registers), FC04 (Read Input Registers), FC05 (Write Single Coil), FC06 (Write Single Register), FC15 (Write Multiple Coils), FC16 (Write Multiple Registers)
+- **Response decoder**: automatic parsing and display of register/coil data
+- **Display formats**: hexadecimal, uint16, int16, uint32, int32, float32, string
+- **Byte swap and word swap** options for multi-register values
+- **Configurable timeout and retry** settings, saved per session
+
 ## Prerequisites
 
 - [Rust](https://rustup.rs/) (stable)
@@ -22,7 +41,7 @@ Runs in two modes:
 ## Setup
 
 ```sh
-git clone https://github.com/your-handle/conduit
+git clone https://github.com/deid84/conduit
 cd conduit/frontend
 npm install
 cd ..

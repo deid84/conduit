@@ -11,15 +11,144 @@
   let retryCount = $state(3)      // max retries after first failure
   let sendError  = $state<string | null>(null)
 
+  // ── Response display settings ──────────────────────────────────────────────
+  type DisplayFormat = 'hex' | 'uint16' | 'int16' | 'uint32' | 'int32' | 'float32' | 'string'
+  let displayFormat = $state<DisplayFormat>('hex')
+  let swapBytes     = $state(false)  // swap bytes within each 16-bit word
+  let swapWords     = $state(false)  // swap word order in 32-bit pairs (CDAB/DCBA)
+
+  const is32bit = $derived(
+    displayFormat === 'uint32' || displayFormat === 'int32' || displayFormat === 'float32'
+  )
+
+  // Convert an array of raw u16 register values to a display string using the
+  // current format and byte/word-order settings.
+  function wordsToDisplay(rawValues: number[]): string {
+    // Step 1 — optional byte swap within each 16-bit word
+    const words = swapBytes
+      ? rawValues.map(v => ((v & 0xFF) << 8) | ((v >> 8) & 0xFF))
+      : [...rawValues]
+
+    switch (displayFormat) {
+      case 'hex':
+        return words.map(v => `0x${v.toString(16).toUpperCase().padStart(4, '0')}`).join('  ')
+
+      case 'uint16':
+        return words.map(v => String(v)).join('  ')
+
+      case 'int16':
+        return words.map(v => String(v >= 0x8000 ? v - 0x10000 : v)).join('  ')
+
+      case 'string': {
+        const bytes: number[] = []
+        for (const v of words) bytes.push((v >> 8) & 0xFF, v & 0xFF)
+        return bytes
+          .filter(b => b !== 0)
+          .map(b => b >= 0x20 && b < 0x7F ? String.fromCharCode(b) : '·')
+          .join('')
+      }
+
+      default: {
+        // Step 2 — optional word swap across pairs (for 32-bit formats)
+        const w = swapWords ? [...words].reverse() : words
+        const out: string[] = []
+        for (let i = 0; i + 1 < w.length; i += 2) {
+          const hi = w[i], lo = w[i + 1]
+          const u32 = ((hi * 65536) + lo) >>> 0
+          if (displayFormat === 'uint32') {
+            out.push(String(u32))
+          } else if (displayFormat === 'int32') {
+            out.push(String(u32 >= 0x80000000 ? u32 - 0x100000000 : u32))
+          } else {
+            // float32 — pack bytes through DataView for correct IEEE 754 decoding
+            const buf = new ArrayBuffer(4)
+            const dv  = new DataView(buf)
+            dv.setUint16(0, hi, false)
+            dv.setUint16(2, lo, false)
+            const f = dv.getFloat32(0, false)
+            out.push(Number.isFinite(f) ? String(Number(f.toPrecision(7))) : String(f))
+          }
+        }
+        // Leftover single word if odd register count — display as hex
+        if (w.length % 2 !== 0) {
+          const last = w[w.length - 1]
+          out.push(`0x${last.toString(16).toUpperCase().padStart(4, '0')}`)
+        }
+        return out.length
+          ? out.join('  ')
+          : words.map(v => `0x${v.toString(16).toUpperCase().padStart(4, '0')}`).join('  ')
+      }
+    }
+  }
+
   // ── Request builder state ──────────────────────────────────────────────────
-  let unitId  = $state(1)
-  let fc      = $state(3)         // default: Read Holding Registers
-  let address = $state(0)
-  let count   = $state(10)
-  let value   = $state(0)
-  let coilOn  = $state(false)
-  let sending = $state(false)
-  let txId    = $state(1)         // auto-increment for TCP
+  let unitId         = $state(1)
+  let fc             = $state(3)   // default: Read Holding Registers
+  let address        = $state(0)
+  let count          = $state(10)
+  let value          = $state(0)
+  let coilOn         = $state(false)
+  let multiValuesText = $state('')  // raw text for FC15/FC16 multi-value input
+  let sending        = $state(false)
+  let txId           = $state(1)   // auto-increment for TCP
+
+  // ── Multi-value parsing ────────────────────────────────────────────────────
+
+  // Tokenises a comma/whitespace-separated string, preserving quoted strings.
+  function tokenizeValues(text: string): string[] {
+    const tokens: string[] = []
+    let i = 0
+    while (i < text.length) {
+      if (/[\s,]/.test(text[i])) { i++; continue }
+      if (text[i] === '"' || text[i] === "'") {
+        const q = text[i++]
+        let tok = q
+        while (i < text.length && text[i] !== q) tok += text[i++]
+        tok += (text[i++] ?? '')
+        tokens.push(tok)
+      } else {
+        let j = i
+        while (j < text.length && !/[\s,]/.test(text[j])) j++
+        tokens.push(text.slice(i, j))
+        i = j
+      }
+    }
+    return tokens
+  }
+
+  // Parse register values — supports decimal, 0x hex, and "ASCII" / 'ASCII'
+  // strings (2 chars packed per u16, big-endian).
+  function parseRegValues(text: string): number[] {
+    const out: number[] = []
+    for (const tok of tokenizeValues(text)) {
+      if (/^0x[0-9a-fA-F]+$/i.test(tok)) {
+        out.push(parseInt(tok, 16) & 0xFFFF)
+      } else if (/^["'][^]*["']$/.test(tok)) {
+        const str = tok.slice(1, -1)
+        for (let i = 0; i < str.length; i += 2) {
+          const hi = str.charCodeAt(i) & 0xFF
+          const lo = i + 1 < str.length ? str.charCodeAt(i + 1) & 0xFF : 0
+          out.push((hi << 8) | lo)
+        }
+      } else if (/^-?\d+$/.test(tok)) {
+        const n = parseInt(tok, 10)
+        out.push(((n % 65536) + 65536) % 65536)
+      }
+    }
+    return out
+  }
+
+  // Parse coil values — 0/1, ON/OFF, true/false (case-insensitive).
+  function parseCoilValues(text: string): boolean[] {
+    return text.split(/[\s,]+/)
+      .filter(Boolean)
+      .map(t => t === '1' || /^(on|true)$/i.test(t))
+  }
+
+  const parsedRegs  = $derived(parseRegValues(multiValuesText))
+  const parsedCoils = $derived(parseCoilValues(multiValuesText))
+  const multiCount  = $derived(fc === 15 ? parsedCoils.length : parsedRegs.length)
+  const canSend     = $derived(!sending && (fc !== 15 && fc !== 16 || multiCount > 0))
 
   const FC_OPTIONS = [
     { value: 1,  label: '01 – Read Coils' },
@@ -44,14 +173,20 @@
       case 4:  return { type: 'read_words', fc: 4, start: address, count }
       case 5:  return { type: 'write_single_coil',     address, on: coilOn }
       case 6:  return { type: 'write_single_register', address, value }
-      case 15: return { type: 'write_multiple_coils',     address, count, values: Array(count).fill(coilOn) }
-      case 16: return { type: 'write_multiple_registers', address, count, values: Array(count).fill(value) }
+      case 15: return { type: 'write_multiple_coils',     address, count: parsedCoils.length, values: parsedCoils }
+      case 16: return { type: 'write_multiple_registers', address, count: parsedRegs.length,  values: parsedRegs  }
       default: return { type: 'unknown', function_code: fc, data: [] }
     }
   }
 
   async function sendRequest() {
-    sending  = true
+    // Snapshot reactive props once so the async path isn't affected by
+    // re-renders or parent-driven prop changes mid-flight.
+    const connId   = connection.id
+    const connMode = connection.modbusMode
+    if (!connId || !connMode) return
+
+    sending   = true
     sendError = null
     const pdu = buildPdu(fc)
 
@@ -59,24 +194,42 @@
     const maxAttempts = 1 + Math.max(0, retryCount)
 
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
-      const ac    = new AbortController()
-      const timer = setTimeout(() => ac.abort(), timeoutMs)
+      const ac = new AbortController()
+      let timerId: ReturnType<typeof setTimeout> | undefined
+
       try {
-        const tid = connection.modbusMode === 'tcp' ? txId : undefined
-        await sendModbus(connection.id, unitId, pdu, tid, ac.signal)
-        if (connection.modbusMode === 'tcp') txId++
-        store.appendModbusTxFrame(connection.id, {
-          mode:           connection.modbusMode!,
+        const tid = connMode === 'tcp' ? txId : undefined
+
+        // Promise.race guarantees the await resolves within timeoutMs,
+        // regardless of whether the AbortSignal is honoured by the runtime.
+        // The no-op .catch() on the fetch suppresses unhandled-rejection warnings
+        // in the (timeout-wins) case where the fetch eventually rejects after abort.
+        const fetchPromise = sendModbus(connId, unitId, pdu, tid, ac.signal)
+        fetchPromise.catch(() => {})
+        await Promise.race([
+          fetchPromise,
+          new Promise<never>((_, reject) => {
+            timerId = setTimeout(() => {
+              ac.abort()
+              reject(new Error(`timeout after ${timeoutMs}ms`))
+            }, timeoutMs)
+          }),
+        ])
+
+        clearTimeout(timerId)
+        if (connMode === 'tcp') txId++
+        store.appendModbusTxFrame(connId, {
+          mode:           connMode,
           unit_id:        unitId,
           transaction_id: tid ?? null,
           pdu,
         })
         lastErr = ''
-        break  // success — stop retrying
+        break
       } catch (e) {
+        clearTimeout(timerId)
         lastErr = e instanceof Error ? e.message : String(e)
-      } finally {
-        clearTimeout(timer)
+        console.error(`[modbus] send attempt ${attempt + 1}/${maxAttempts}:`, e)
       }
     }
 
@@ -93,7 +246,7 @@
       case 'read_bits_response':
         return pdu.values.map(v => v ? '1' : '0').join(' ')
       case 'read_words_response':
-        return pdu.values.map(v => `${v} (0x${v.toString(16).toUpperCase().padStart(4, '0')})`).join('  ')
+        return wordsToDisplay(pdu.values)
       case 'write_single_coil':
         return `@${pdu.address} = ${pdu.on ? 'ON' : 'OFF'}`
       case 'write_single_register':
@@ -106,7 +259,7 @@
       case 'read_write_multiple':
         return `R@${pdu.read_address}×${pdu.read_count}  W@${pdu.write_address}`
       case 'read_write_multiple_response':
-        return pdu.values.map(v => v.toString(16).toUpperCase().padStart(4, '0')).join(' ')
+        return wordsToDisplay(pdu.values)
       case 'exception':
         return `EXC 0x${pdu.exception_code.toString(16).toUpperCase().padStart(2, '0')}`
       case 'unknown':
@@ -147,8 +300,8 @@
 
 <div class="flex flex-1 flex-col overflow-hidden">
 
-  <!-- Connection settings bar -->
-  <div class="flex shrink-0 items-center gap-4 border-b border-border bg-muted/10 px-3 py-1.5 text-[11px]">
+  <!-- Settings bar: connection + display -->
+  <div class="flex shrink-0 items-center gap-3 border-b border-border bg-muted/10 px-3 py-1.5 text-[11px]">
     <span class="text-muted-foreground">Timeout</span>
     <div class="flex items-center gap-1">
       <input
@@ -173,8 +326,33 @@
       bind:value={retryCount}
     />
 
+    <span class="h-3 w-px bg-border"></span>
+
+    <span class="text-muted-foreground">Format</span>
+    <select class="{SELECT_CLS} py-0" bind:value={displayFormat}>
+      <option value="hex">Hex</option>
+      <option value="uint16">Uint16</option>
+      <option value="int16">Int16</option>
+      <option value="uint32">Uint32</option>
+      <option value="int32">Int32</option>
+      <option value="float32">Float32</option>
+      <option value="string">String</option>
+    </select>
+
+    <label class="flex cursor-pointer items-center gap-1.5">
+      <input type="checkbox" class="h-3 w-3 accent-primary" bind:checked={swapBytes} />
+      <span class="text-muted-foreground">Swap bytes</span>
+    </label>
+
+    {#if is32bit}
+      <label class="flex cursor-pointer items-center gap-1.5">
+        <input type="checkbox" class="h-3 w-3 accent-primary" bind:checked={swapWords} />
+        <span class="text-muted-foreground">Swap words</span>
+      </label>
+    {/if}
+
     {#if sendError}
-      <span class="ml-2 text-red-400">{sendError}</span>
+      <span class="ml-auto text-red-400">{sendError}</span>
     {/if}
   </div>
 
@@ -204,27 +382,43 @@
         <input type="number" min="0" max="65535" class="{INPUT_CLS} w-20" bind:value={address} />
       </div>
 
-      <!-- Count (read / write multiple) -->
-      {#if needsCount || fc === 15 || fc === 16}
+      <!-- Count — read FCs only (1-4) -->
+      {#if needsCount}
         <div class="flex flex-col gap-0.5">
           <label class="text-[10px] text-muted-foreground">Count</label>
           <input type="number" min="1" max="125" class="{INPUT_CLS} w-16" bind:value={count} />
         </div>
       {/if}
 
-      <!-- Value / coil -->
-      {#if isWrite && !needsCount}
-        {#if isCoil}
-          <label class="flex items-center gap-1.5 text-xs text-foreground cursor-pointer pb-1">
-            <input type="checkbox" bind:checked={coilOn} />
-            {coilOn ? 'ON' : 'OFF'}
+      <!-- FC5: single coil -->
+      {#if fc === 5}
+        <label class="flex cursor-pointer items-center gap-1.5 pb-1 text-xs text-foreground">
+          <input type="checkbox" bind:checked={coilOn} />
+          {coilOn ? 'ON' : 'OFF'}
+        </label>
+      {/if}
+
+      <!-- FC6: single register value -->
+      {#if fc === 6}
+        <div class="flex flex-col gap-0.5">
+          <label class="text-[10px] text-muted-foreground">Value</label>
+          <input type="number" min="0" max="65535" class="{INPUT_CLS} w-20" bind:value />
+        </div>
+      {/if}
+
+      <!-- FC15/16: comma-separated values — decimal, 0x hex, "ASCII" -->
+      {#if fc === 15 || fc === 16}
+        <div class="flex flex-col gap-0.5">
+          <label class="text-[10px] text-muted-foreground">
+            Values <span class="opacity-50">({multiCount})</span>
           </label>
-        {:else}
-          <div class="flex flex-col gap-0.5">
-            <label class="text-[10px] text-muted-foreground">Value</label>
-            <input type="number" min="0" max="65535" class="{INPUT_CLS} w-20" bind:value />
-          </div>
-        {/if}
+          <input
+            type="text"
+            placeholder={fc === 15 ? '1, 0, 1, 1' : '100, 0xFF, "AB"'}
+            class="{INPUT_CLS} w-52"
+            bind:value={multiValuesText}
+          />
+        </div>
       {/if}
 
       <!-- TCP transaction ID -->
@@ -236,14 +430,16 @@
       {/if}
 
       <button
+        type="button"
         class="rounded bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-40"
-        disabled={sending}
+        disabled={!canSend}
         onclick={sendRequest}
       >
         {sending ? '…' : 'Send'}
       </button>
 
       <button
+        type="button"
         class="ml-auto text-[10px] text-muted-foreground hover:text-foreground transition-colors"
         onclick={() => { const c = store.connections.find(c => c.id === connection.id); if (c) c.modbusFrames = [] }}
       >
@@ -270,7 +466,7 @@
           </tr>
         </thead>
         <tbody>
-          {#each connection.modbusFrames as frame (frame.ts + frame.direction + Math.random())}
+          {#each connection.modbusFrames as frame, i (i)}
             <tr class={cn(
               'border-b border-border/30',
               frame.direction === 'tx' ? 'text-cyan-400' : 'text-foreground'

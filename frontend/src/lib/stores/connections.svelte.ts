@@ -360,7 +360,10 @@ export const store = $state({
     if (conn) conn.modbusFrames.push(frame)
   },
 
-  appendModbusTxFrame(id: string, frame: Omit<ModbusFrame, 'ts' | 'direction'>) {
-    this.appendModbusFrame(id, { ...frame, ts: Date.now(), direction: 'tx' })
+  appendModbusTxFrame(id: string, frame: Omit<ModbusFrame, 'ts' | 'direction'>, txByteCount = 0) {
+    const conn = this.connections.find(c => c.id === id)
+    if (!conn) return
+    conn.modbusFrames.push({ ...frame, ts: Date.now(), direction: 'tx' })
+    if (txByteCount > 0) conn.txBytes += txByteCount
   },
 })
