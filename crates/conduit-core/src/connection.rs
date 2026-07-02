@@ -45,18 +45,20 @@ pub enum SignalCmd { SetDtr(bool), SetRts(bool) }
 
 /// An active connection to a device or network endpoint.
 ///
-/// - `inbound`:    subscribe to receive data from the device (broadcast, multi-consumer)
-/// - `outbound`:   send raw bytes to the device
-/// - `signals`:    watch the RS-232 signal state; for TCP/UDP the value never changes
-/// - `signal_cmd`: send DTR/RTS control commands; None for TCP/UDP
+/// - `inbound`:     subscribe to receive data from the device (broadcast, multi-consumer)
+/// - `outbound`:    send raw bytes to the device
+/// - `signals`:     watch the RS-232 signal state; for TCP/UDP the value never changes
+/// - `signal_cmd`:  send DTR/RTS control commands; None for TCP/UDP
+/// - `modbus_mode`: when set, the WebSocket stream also emits decoded Modbus frames as JSON
 pub struct Connection {
-    pub id:         ConnectionId,
-    pub kind:       ConnectionKind,
-    pub inbound:    broadcast::Sender<Bytes>,
-    pub outbound:   mpsc::Sender<Bytes>,
-    pub signals:    watch::Sender<SignalState>,
-    pub signal_cmd: Option<mpsc::Sender<SignalCmd>>,
-    tasks:          Vec<tokio::task::JoinHandle<()>>,
+    pub id:          ConnectionId,
+    pub kind:        ConnectionKind,
+    pub inbound:     broadcast::Sender<Bytes>,
+    pub outbound:    mpsc::Sender<Bytes>,
+    pub signals:     watch::Sender<SignalState>,
+    pub signal_cmd:  Option<mpsc::Sender<SignalCmd>>,
+    pub modbus_mode: Option<crate::modbus::Mode>,
+    tasks:           Vec<tokio::task::JoinHandle<()>>,
 }
 
 impl Connection {
@@ -68,7 +70,7 @@ impl Connection {
         signal_cmd: Option<mpsc::Sender<SignalCmd>>,
         tasks:      Vec<tokio::task::JoinHandle<()>>,
     ) -> Self {
-        Self { id: ConnectionId::new(), kind, inbound, outbound, signals, signal_cmd, tasks }
+        Self { id: ConnectionId::new(), kind, inbound, outbound, signals, signal_cmd, modbus_mode: None, tasks }
     }
 
     pub fn subscribe(&self) -> broadcast::Receiver<Bytes> { self.inbound.subscribe() }

@@ -6,7 +6,7 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
-use conduit_core::{connection::ConnectionId, SignalState};
+use conduit_core::{connection::ConnectionId, modbus::Mode, SignalState};
 use tokio::sync::{broadcast, watch};
 
 use crate::state::AppState;
@@ -21,30 +21,58 @@ pub async fn handler(
         Err(_) => return StatusCode::BAD_REQUEST.into_response(),
     };
 
-    let (rx, sig_rx) = {
+    let (rx, sig_rx, modbus_mode) = {
         let conns = state.connections.read().await;
         match conns.get(&id) {
-            Some(c) => (c.subscribe(), c.subscribe_signals()),
+            Some(c) => (c.subscribe(), c.subscribe_signals(), c.modbus_mode),
             None    => return StatusCode::NOT_FOUND.into_response(),
         }
     };
 
-    ws.on_upgrade(move |socket| handle_socket(socket, rx, sig_rx))
+    ws.on_upgrade(move |socket| handle_socket(socket, rx, sig_rx, modbus_mode))
 }
 
 async fn handle_socket(
-    mut socket: WebSocket,
-    mut rx:     broadcast::Receiver<bytes::Bytes>,
-    mut sig_rx: watch::Receiver<SignalState>,
+    mut socket:    WebSocket,
+    mut rx:        broadcast::Receiver<bytes::Bytes>,
+    mut sig_rx:    watch::Receiver<SignalState>,
+    modbus_mode:   Option<Mode>,
 ) {
+    let mut modbus_buf: Vec<u8> = Vec::new();
+
     loop {
         tokio::select! {
             data = rx.recv() => match data {
                 Ok(bytes) => {
-                    if socket.send(Message::Binary(bytes)).await.is_err() { break; }
+                    // Always forward raw bytes
+                    if socket.send(Message::Binary(bytes.clone())).await.is_err() { break; }
+
+                    // Modbus frame parsing overlay
+                    if let Some(mode) = modbus_mode {
+                        modbus_buf.extend_from_slice(&bytes);
+                        loop {
+                            if modbus_buf.is_empty() { break; }
+                            match super::modbus::try_decode(mode, &modbus_buf) {
+                                Some((frame, consumed)) => {
+                                    modbus_buf.drain(..consumed);
+                                    // Skip resync frames (unit_id=0, fc=0 placeholder)
+                                    if frame.unit_id == 0 && matches!(frame.pdu, conduit_core::modbus::Pdu::Unknown { function_code: 0, .. }) {
+                                        continue;
+                                    }
+                                    let json = serde_json::json!({
+                                        "type": "modbus",
+                                        "frame": frame,
+                                    }).to_string();
+                                    if socket.send(Message::Text(json.into())).await.is_err() { break; }
+                                }
+                                None => break, // need more data
+                            }
+                        }
+                    }
                 }
                 Err(broadcast::error::RecvError::Lagged(n)) => {
                     tracing::warn!("WebSocket client lagged by {n} messages");
+                    modbus_buf.clear(); // buffer no longer coherent after a lag
                 }
                 Err(broadcast::error::RecvError::Closed) => {
                     let _ = socket.send(Message::Text(r#"{"type":"closed"}"#.into())).await;

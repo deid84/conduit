@@ -8,6 +8,7 @@ use tower_http::{cors::CorsLayer, services::{ServeDir, ServeFile}};
 use crate::state::AppState;
 
 mod connections;
+mod modbus;
 mod ports;
 mod signals;
 mod stream;
@@ -25,6 +26,8 @@ pub fn router(state: AppState, static_dir: PathBuf) -> Router {
         .route("/api/connections/{id}/signals", get(signals::get_signals))
         .route("/api/connections/{id}/dtr", post(signals::set_dtr))
         .route("/api/connections/{id}/rts", post(signals::set_rts))
+        .route("/api/connections/{id}/modbus/mode", post(modbus::set_mode))
+        .route("/api/connections/{id}/modbus/send", post(modbus::send))
         .fallback_service(serve)
         .layer(CorsLayer::permissive())
         .with_state(state)
