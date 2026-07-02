@@ -48,7 +48,7 @@
 /* ── Brand dark — Cinder surface ────────────────────────────────── */
 [data-theme="dark"] {
   color-scheme: dark;
-  --background:         #252019;   /* Cinder    */
+  --background:         #181310;   /* Cinder    */
   --foreground:         #F4F1EB;   /* Bone      */
   --muted:              #332B22;
   --muted-foreground:   #9A8A78;
