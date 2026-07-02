@@ -1,12 +1,16 @@
 <script lang="ts">
   import { connect } from '$lib/stores/connections.svelte'
-  import type { ConnConfig, SerialConfig, TcpConfig, TcpServerConfig, UdpConfig } from '$lib/stores/connections.svelte'
+  import type { ConnConfig, SerialConfig, TcpConfig, TcpServerConfig, UdpConfig, ModbusMode } from '$lib/stores/connections.svelte'
   import { listPorts } from '$lib/api'
   import { profileStore } from '$lib/stores/profiles.svelte'
   import { cn } from '$lib/utils'
 
   type Protocol = 'serial' | 'tcp' | 'tcp_server' | 'udp'
-  let proto = $state<Protocol>('serial')
+  let proto       = $state<Protocol>('serial')
+  let modbusMode  = $state<ModbusMode | null>(null)
+
+  // Reset Modbus mode when the transport type changes.
+  $effect(() => { proto; modbusMode = null })
 
   let serial = $state<SerialConfig>({
     port:         '',
@@ -48,7 +52,7 @@
         case 'tcp_server': config = { type: 'tcp_server', config: { ...tcpServer } }; break
         case 'udp':        config = { type: 'udp',        config: { ...udp       } }; break
       }
-      await connect(config)
+      await connect(config, modbusMode ?? undefined)
     } catch (e) {
       error = e instanceof Error ? e.message : String(e)
     } finally {
@@ -240,6 +244,25 @@
             <option value="hardware">Hardware (RTS/CTS)</option>
           </select>
         </div>
+
+        <!-- Modbus protocol selector for serial -->
+        <div>
+          <span class={LABEL_CLS}>Protocol</span>
+          <div class="flex gap-1">
+            {#each [['', 'Raw'], ['rtu', 'Modbus RTU'], ['ascii', 'Modbus ASCII']] as [val, lbl]}
+              <button
+                type="button"
+                class={cn(
+                  'flex-1 rounded border px-2 py-1.5 text-xs font-medium transition-colors',
+                  modbusMode === (val || null)
+                    ? 'border-primary/60 bg-primary/10 text-primary'
+                    : 'border-border text-muted-foreground hover:text-foreground'
+                )}
+                onclick={() => modbusMode = val ? (val as ModbusMode) : null}
+              >{lbl}</button>
+            {/each}
+          </div>
+        </div>
       </div>
 
     {:else if proto === 'tcp'}
@@ -251,6 +274,25 @@
         <div>
           <label for="t-port" class={LABEL_CLS}>Port</label>
           <input id="t-port" type="number" class={INPUT_CLS} bind:value={tcp.port} min="1" max="65535" />
+        </div>
+
+        <!-- Modbus protocol selector for TCP client -->
+        <div>
+          <span class={LABEL_CLS}>Protocol</span>
+          <div class="flex gap-1">
+            {#each [['', 'Raw'], ['tcp', 'Modbus TCP']] as [val, lbl]}
+              <button
+                type="button"
+                class={cn(
+                  'flex-1 rounded border px-2 py-1.5 text-xs font-medium transition-colors',
+                  modbusMode === (val || null)
+                    ? 'border-primary/60 bg-primary/10 text-primary'
+                    : 'border-border text-muted-foreground hover:text-foreground'
+                )}
+                onclick={() => modbusMode = val ? (val as ModbusMode) : null}
+              >{lbl}</button>
+            {/each}
+          </div>
         </div>
       </div>
 

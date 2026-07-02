@@ -133,7 +133,7 @@ function openStream(id: string) {
   _sockets.set(id, ws)
 }
 
-export async function connect(config: ConnConfig): Promise<void> {
+export async function connect(config: ConnConfig, modbusMode?: ModbusMode): Promise<void> {
   const { id } = await openConnection(config)
   store.connections.push({
     id,
@@ -150,11 +150,14 @@ export async function connect(config: ConnConfig): Promise<void> {
     logFilename:  '',
     fileHandle:   null,
     signals:      { cd: false, dsr: false, cts: false, ri: false, dtr: false, rts: false },
-    modbusMode:   null,
+    modbusMode:   modbusMode ?? null,
     modbusFrames: [],
   })
   store.activeId    = id
   store.newConnOpen = false
+  // Set mode on the backend BEFORE opening the WebSocket — the stream handler
+  // reads modbus_mode once at connection time, so order matters here.
+  if (modbusMode) await setModbusMode(id, modbusMode)
   openStream(id)
 }
 

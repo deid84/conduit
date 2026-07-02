@@ -37,11 +37,14 @@
 
   const isSerial = $derived(connection.conn.type === 'serial')
 
-  const MODBUS_MODES: { value: 'rtu' | 'ascii' | 'tcp'; label: string }[] = [
-    { value: 'rtu',   label: 'RTU'   },
-    { value: 'ascii', label: 'ASCII' },
-    { value: 'tcp',   label: 'TCP'   },
-  ]
+  // Only show Modbus modes that are valid for the current transport.
+  const modbusOptions = $derived((): { value: 'rtu' | 'ascii' | 'tcp'; label: string }[] => {
+    switch (connection.conn.type) {
+      case 'serial': return [{ value: 'rtu', label: 'RTU' }, { value: 'ascii', label: 'ASCII' }]
+      case 'tcp':    return [{ value: 'tcp', label: 'Modbus' }]
+      default:       return []
+    }
+  })
 </script>
 
 <div class="flex shrink-0 items-center gap-3 border-t border-border bg-muted/10 px-3 py-1 text-[11px]">
@@ -82,20 +85,21 @@
     >RTS</button>
   {/if}
 
-  <!-- Modbus mode selector -->
-  <span class="mx-1 h-3 w-px bg-border"></span>
-  <span class="text-[10px] text-muted-foreground">Modbus</span>
-  {#each MODBUS_MODES as m}
-    <button
-      onclick={() => store.setModbusMode(connection.id, connection.modbusMode === m.value ? null : m.value)}
-      class={cn(
-        'rounded px-1.5 py-0.5 font-mono text-[10px] tracking-wider transition-colors',
-        connection.modbusMode === m.value
-          ? 'bg-primary/20 text-primary hover:bg-primary/30'
-          : 'text-zinc-600 hover:text-zinc-400'
-      )}
-    >{m.label}</button>
-  {/each}
+  <!-- Modbus mode toggle (only shown for serial and TCP client) -->
+  {#if modbusOptions().length > 0}
+    <span class="mx-1 h-3 w-px bg-border"></span>
+    {#each modbusOptions() as m}
+      <button
+        onclick={() => store.setModbusMode(connection.id, connection.modbusMode === m.value ? null : m.value)}
+        class={cn(
+          'rounded px-1.5 py-0.5 font-mono text-[10px] tracking-wider transition-colors',
+          connection.modbusMode === m.value
+            ? 'bg-primary/20 text-primary hover:bg-primary/30'
+            : 'text-zinc-600 hover:text-zinc-400'
+        )}
+      >{m.label}</button>
+    {/each}
+  {/if}
 
   <span class="ml-auto text-muted-foreground">RX {fmtBytes(connection.rxBytes)}</span>
   <span class="text-muted-foreground">TX {fmtBytes(connection.txBytes)}</span>
