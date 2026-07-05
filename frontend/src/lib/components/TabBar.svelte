@@ -72,7 +72,7 @@
     onclick={() => store.openNew()}
   >+</button>
 
-  <div class="ml-auto flex items-center px-2">
+  <div class="ml-auto flex items-center gap-0.5 px-2">
     <button
       class={cn(
         'flex size-7 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground',

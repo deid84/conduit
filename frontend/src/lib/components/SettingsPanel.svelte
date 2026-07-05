@@ -5,10 +5,12 @@
   import { profileStore } from '$lib/stores/profiles.svelte'
   import type { Profile } from '$lib/stores/profiles.svelte'
   import { cn } from '$lib/utils'
+  import AboutModal from './AboutModal.svelte'
 
   let { open = $bindable(false) }: { open: boolean } = $props()
 
   let importError = $state<string | null>(null)
+  let aboutOpen = $state(false)
 
   function exportProfiles() {
     const json = JSON.stringify(profileStore.profiles, null, 2)
@@ -164,5 +166,22 @@
         {/if}
       </section>
     </div>
+
+    <!-- About -->
+    <div class="border-t border-border p-4">
+      <button
+        class="flex w-full items-center justify-center gap-2 rounded border border-border px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        onclick={() => aboutOpen = true}
+      >
+        <svg class="size-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="8" cy="8" r="6"/>
+          <line x1="8" y1="7" x2="8" y2="11"/>
+          <circle cx="8" cy="5" r="0.5" fill="currentColor" stroke="none"/>
+        </svg>
+        About Conduit
+      </button>
+    </div>
   </div>
 {/if}
+
+<AboutModal bind:open={aboutOpen} />
