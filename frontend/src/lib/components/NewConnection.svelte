@@ -105,6 +105,31 @@
       selectedProfileId = ''
     }
   }
+
+  let importError = $state<string | null>(null)
+
+  function importProfiles() {
+    importError = null
+    const input = document.createElement('input')
+    input.type   = 'file'
+    input.accept = '.json,application/json'
+    input.onchange = () => {
+      const file = input.files?.[0]
+      if (!file) return
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        try {
+          const data = JSON.parse(e.target?.result as string)
+          const added = profileStore.importJson(data)
+          if (added === 0) importError = 'Nessun profilo nuovo trovato.'
+        } catch {
+          importError = 'File non valido — JSON profili Conduit atteso.'
+        }
+      }
+      reader.readAsText(file)
+    }
+    input.click()
+  }
 </script>
 
 <div class="flex flex-1 items-center justify-center overflow-hidden bg-background p-8">
@@ -133,7 +158,7 @@
         >✕</button>
       </div>
     {:else}
-      <div class="mb-4 flex gap-1">
+      <div class="mb-1 flex gap-1">
         <select
           class={cn(SELECT_CLS, 'flex-1')}
           bind:value={selectedProfileId}
@@ -152,6 +177,11 @@
           class="rounded border border-border px-2.5 py-1.5 text-[11px] text-foreground hover:bg-muted/40 transition-colors"
           onclick={() => savingName = ''}
         >Save…</button>
+        <button
+          class="rounded border border-border px-2.5 py-1.5 text-[11px] text-foreground hover:bg-muted/40 transition-colors"
+          onclick={importProfiles}
+          title="Import profiles from JSON file"
+        >Import…</button>
         {#if selectedProfileId}
           <button
             class="rounded border border-border px-2.5 py-1.5 text-[11px] text-red-400 hover:text-red-300 transition-colors"
@@ -159,6 +189,11 @@
           >✕</button>
         {/if}
       </div>
+      {#if importError}
+        <p class="mb-3 text-[10px] text-red-400">{importError}</p>
+      {:else}
+        <div class="mb-3"></div>
+      {/if}
     {/if}
 
     <!-- Protocol selector -->

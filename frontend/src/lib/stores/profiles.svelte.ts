@@ -36,4 +36,19 @@ export const profileStore = $state({
       save(this.profiles)
     }
   },
+
+  importJson(data: unknown): number {
+    if (!Array.isArray(data)) throw new Error('expected array')
+    const existingIds = new Set(this.profiles.map(p => p.id))
+    let added = 0
+    for (const p of data as Profile[]) {
+      if (typeof p.id !== 'string' || typeof p.name !== 'string' || !p.config) continue
+      if (existingIds.has(p.id)) continue
+      this.profiles.push(p)
+      existingIds.add(p.id)
+      added++
+    }
+    save(this.profiles)
+    return added
+  },
 })

@@ -3,7 +3,6 @@
   import { themeStore, setTheme } from '$lib/stores/theme.svelte'
   import type { ThemePreference } from '$lib/stores/theme.svelte'
   import { profileStore } from '$lib/stores/profiles.svelte'
-  import type { Profile } from '$lib/stores/profiles.svelte'
   import { cn } from '$lib/utils'
   import AboutModal from './AboutModal.svelte'
 
@@ -28,7 +27,7 @@
   function importProfiles() {
     importError = null
     const input = document.createElement('input')
-    input.type  = 'file'
+    input.type   = 'file'
     input.accept = '.json,application/json'
     input.onchange = () => {
       const file = input.files?.[0]
@@ -36,19 +35,8 @@
       const reader = new FileReader()
       reader.onload = (e) => {
         try {
-          const data = JSON.parse(e.target?.result as string) as Profile[]
-          if (!Array.isArray(data)) throw new Error('invalid format')
-          const existingIds = new Set(profileStore.profiles.map(p => p.id))
-          let added = 0
-          for (const p of data) {
-            if (typeof p.id !== 'string' || typeof p.name !== 'string' || !p.config) continue
-            if (existingIds.has(p.id)) continue
-            profileStore.profiles.push(p)
-            existingIds.add(p.id)
-            added++
-          }
-          // persist
-          localStorage.setItem('conduit-profiles', JSON.stringify(profileStore.profiles))
+          const data = JSON.parse(e.target?.result as string)
+          const added = profileStore.importJson(data)
           if (added === 0) importError = 'No new profiles found (all already present).'
         } catch {
           importError = 'Invalid file — expected a Conduit profiles JSON.'
