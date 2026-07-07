@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Connection, ModbusPdu, MonitorRow, DisplayFormat } from '$lib/stores/connections.svelte'
   import { store } from '$lib/stores/connections.svelte'
+  import { profileStore } from '$lib/stores/profiles.svelte'
   import { sendModbus, readModbus } from '$lib/api'
   import { cn } from '$lib/utils'
 
@@ -67,6 +68,16 @@
     return [d.getHours(), d.getMinutes(), d.getSeconds()]
       .map(n => String(n).padStart(2, '0')).join(':') +
       '.' + String(d.getMilliseconds()).padStart(3, '0')
+  }
+
+  // ── Save as profile ────────────────────────────────────────────────────────
+  let savingProfileName = $state<string | null>(null)
+
+  function saveAsProfile() {
+    const name = (savingProfileName ?? '').trim()
+    if (!name) return
+    profileStore.add(name, connection.conn, connection.modbusMode, connection.monitorRows)
+    savingProfileName = null
   }
 
   // ── Monitor — polling ──────────────────────────────────────────────────────
@@ -568,14 +579,46 @@
       {/if}
     </div>
 
-    <!-- Add row footer -->
+    <!-- Monitor footer: add row + save as profile -->
     <div class="shrink-0 border-t border-border px-3 py-1.5">
-      <button
-        type="button"
-        class="text-[11px] text-muted-foreground transition-colors hover:text-foreground disabled:opacity-40"
-        onclick={() => store.addMonitorRow(connection.id)}
-        disabled={connection.pollRunning}
-      >+ Add row</button>
+      {#if savingProfileName !== null}
+        <div class="flex gap-1">
+          <input
+            type="text"
+            placeholder="Profile name…"
+            class="{CELL_INPUT} flex-1"
+            bind:value={savingProfileName}
+            onkeydown={(e) => { if (e.key === 'Enter') saveAsProfile(); if (e.key === 'Escape') savingProfileName = null }}
+            autofocus
+          />
+          <button
+            type="button"
+            class="rounded border border-border px-2 py-0.5 text-[11px] text-foreground hover:bg-muted/40 transition-colors disabled:opacity-40"
+            onclick={saveAsProfile}
+            disabled={!savingProfileName?.trim()}
+          >Save</button>
+          <button
+            type="button"
+            class="rounded border border-border px-2 py-0.5 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+            onclick={() => savingProfileName = null}
+          >✕</button>
+        </div>
+      {:else}
+        <div class="flex items-center justify-between">
+          <button
+            type="button"
+            class="text-[11px] text-muted-foreground transition-colors hover:text-foreground disabled:opacity-40"
+            onclick={() => store.addMonitorRow(connection.id)}
+            disabled={connection.pollRunning}
+          >+ Add row</button>
+          <button
+            type="button"
+            class="text-[11px] text-muted-foreground transition-colors hover:text-foreground"
+            onclick={() => savingProfileName = ''}
+            title="Save connection + register map as profile"
+          >Save as profile…</button>
+        </div>
+      {/if}
     </div>
 
   <!-- ── LOG TAB ──────────────────────────────────────────────────────────── -->

@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { connect } from '$lib/stores/connections.svelte'
-  import type { ConnConfig, SerialConfig, TcpConfig, TcpServerConfig, UdpConfig, ModbusMode } from '$lib/stores/connections.svelte'
+  import { connect, store } from '$lib/stores/connections.svelte'
+  import type { ConnConfig, SerialConfig, TcpConfig, TcpServerConfig, UdpConfig, ModbusMode, MonitorRow } from '$lib/stores/connections.svelte'
   import { listPorts } from '$lib/api'
   import { profileStore } from '$lib/stores/profiles.svelte'
   import { cn } from '$lib/utils'
@@ -53,6 +53,11 @@
         case 'udp':        config = { type: 'udp',        config: { ...udp       } }; break
       }
       await connect(config, modbusMode ?? undefined)
+      if (pendingMonitorRows.length > 0) {
+        const conn = store.connections.find(c => c.id === store.activeId)
+        if (conn) conn.monitorRows = [...pendingMonitorRows]
+        pendingMonitorRows = []
+      }
     } catch (e) {
       error = e instanceof Error ? e.message : String(e)
     } finally {
@@ -71,8 +76,9 @@
   const SELECT_CLS = 'w-full rounded border border-border bg-muted/20 pl-2 pr-6 py-1.5 text-xs text-foreground focus:border-primary/60 focus:outline-none'
   const LABEL_CLS  = 'mb-1 block text-[11px] text-muted-foreground'
 
-  let selectedProfileId = $state<string>('')
-  let savingName        = $state<string | null>(null)  // null = not saving; string = name being typed
+  let selectedProfileId  = $state<string>('')
+  let savingName         = $state<string | null>(null)  // null = not saving; string = name being typed
+  let pendingMonitorRows = $state<MonitorRow[]>([])
 
   function currentConfig(): ConnConfig {
     switch (proto) {
@@ -91,11 +97,13 @@
     if (p.config.type === 'tcp')        tcp       = { ...p.config.config }
     if (p.config.type === 'tcp_server') tcpServer = { ...p.config.config }
     if (p.config.type === 'udp')        udp       = { ...p.config.config }
+    modbusMode = p.modbusMode ?? null
+    pendingMonitorRows = p.monitorRows.map(r => ({ ...r, id: crypto.randomUUID(), values: null, status: 'idle' as const, lastTs: null, errorMsg: null }))
   }
 
   function saveProfile() {
     const name = (savingName ?? '').trim()
-    if (name) profileStore.add(name, currentConfig())
+    if (name) profileStore.add(name, currentConfig(), modbusMode)
     savingName = null
   }
 
