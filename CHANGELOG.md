@@ -2,6 +2,29 @@
 # Changelog
 
 All notable changes to Conduit.
+## [0.3.0] — 2026-07-09
+
+### Bug Fixes
+- **ui**: Replace native checkbox rendering with custom styled checkbox
+- **ui**: Use theme-aware TX/RX colors with better contrast in light mode
+- **ui**: Expand Data column in Modbus frame log, shrink fixed columns to content
+
+
+### Chore
+- **tauri**: Update generated ACL schemas
+
+
+### Documentation
+- Add Buy Me a Coffee button to GitHub Pages
+
+
+### Features
+- **modbus**: Add Monitor tab with timed polling and synchronous read endpoint
+- **ui**: Add About modal with GitHub and Buy Me a Coffee links
+- **tauri**: Add opener plugin for external links and version in window title
+- **profiles**: Add Import button to NewConnection form
+- **profiles**: Include modbusMode and monitorRows in saved profiles
+
 ## [0.2.0] — 2026-07-02
 
 ### Bug Fixes
@@ -25,6 +48,7 @@ All notable changes to Conduit.
 - Align landing page palette with app colors (Cinder/Bone/Amber)
 - Add app icon to nav and as favicon
 - Use high-res icon.png for favicon and navbar logo
+- Update CHANGELOG for v0.2.0
 
 
 ### Features
