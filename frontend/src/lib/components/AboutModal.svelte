@@ -46,7 +46,7 @@
         <img src="/icon.png" alt="Conduit" class="size-12 rounded-xl" />
         <div>
           <h2 class="text-base font-bold text-foreground">Conduit</h2>
-          <p class="text-xs text-muted-foreground">v0.3.0</p>
+          <p class="text-xs text-muted-foreground">v0.4.0</p>
         </div>
       </div>
 

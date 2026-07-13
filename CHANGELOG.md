@@ -2,6 +2,11 @@
 # Changelog
 
 All notable changes to Conduit.
+## [0.4.0] — 2026-07-13
+
+### Features
+- **profiles**: Add Update button for in-place profile editing
+
 ## [0.3.0] — 2026-07-09
 
 ### Bug Fixes
@@ -12,6 +17,7 @@ All notable changes to Conduit.
 
 ### Chore
 - **tauri**: Update generated ACL schemas
+- Bump version to 0.3.0 and update CHANGELOG
 
 
 ### Documentation
