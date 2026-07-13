@@ -60,6 +60,23 @@ export const profileStore = $state({
     }
   },
 
+  update(id: string, changes: { config?: ConnConfig; modbusMode?: ModbusMode | null; monitorRows?: MonitorRow[] }): void {
+    const idx = this.profiles.findIndex(p => p.id === id)
+    if (idx === -1) return
+    const existing = this.profiles[idx]
+    this.profiles[idx] = {
+      ...existing,
+      ...(changes.config     !== undefined && { config:     changes.config }),
+      ...(changes.modbusMode !== undefined && { modbusMode: changes.modbusMode }),
+      monitorRows: changes.monitorRows !== undefined
+        ? changes.monitorRows.map(({ values: _v, status: _s, lastTs: _t, errorMsg: _e, ...row }) => ({
+            ...row, values: null, status: 'idle' as const, lastTs: null, errorMsg: null,
+          }))
+        : existing.monitorRows,
+    }
+    save(this.profiles)
+  },
+
   importJson(data: unknown): number {
     if (!Array.isArray(data)) throw new Error('expected array')
     const existingIds = new Set(this.profiles.map(p => p.id))

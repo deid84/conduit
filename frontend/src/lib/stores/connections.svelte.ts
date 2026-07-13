@@ -110,11 +110,12 @@ export interface Connection {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   fileHandle:   any | null    // FileSystemFileHandle when File System Access API is available
   signals: SignalState
-  modbusMode:   ModbusMode | null
-  modbusFrames: ModbusFrame[]
-  monitorRows:  MonitorRow[]
-  pollInterval: number
-  pollRunning:  boolean
+  modbusMode:      ModbusMode | null
+  modbusFrames:    ModbusFrame[]
+  monitorRows:     MonitorRow[]
+  pollInterval:    number
+  pollRunning:     boolean
+  sourceProfileId: string | null
 }
 
 function makeLabel(conn: ConnConfig): string {
@@ -174,9 +175,10 @@ export async function connect(config: ConnConfig, modbusMode?: ModbusMode): Prom
     signals:      { cd: false, dsr: false, cts: false, ri: false, dtr: false, rts: false },
     modbusMode:   modbusMode ?? null,
     modbusFrames: [],
-    monitorRows:  [],
-    pollInterval: 1000,
-    pollRunning:  false,
+    monitorRows:     [],
+    pollInterval:    1000,
+    pollRunning:     false,
+    sourceProfileId: null,
   })
   store.activeId    = id
   store.newConnOpen = false

@@ -70,14 +70,29 @@
       '.' + String(d.getMilliseconds()).padStart(3, '0')
   }
 
-  // ── Save as profile ────────────────────────────────────────────────────────
+  // ── Save / update profile ──────────────────────────────────────────────────
   let savingProfileName = $state<string | null>(null)
+
+  const linkedProfile = $derived(
+    connection.sourceProfileId
+      ? profileStore.profiles.find(p => p.id === connection.sourceProfileId) ?? null
+      : null
+  )
 
   function saveAsProfile() {
     const name = (savingProfileName ?? '').trim()
     if (!name) return
     profileStore.add(name, connection.conn, connection.modbusMode, connection.monitorRows)
     savingProfileName = null
+  }
+
+  function updateLinkedProfile() {
+    if (!connection.sourceProfileId) return
+    profileStore.update(connection.sourceProfileId, {
+      config:      connection.conn,
+      modbusMode:  connection.modbusMode,
+      monitorRows: connection.monitorRows,
+    })
   }
 
   // ── Monitor — polling ──────────────────────────────────────────────────────
@@ -611,12 +626,23 @@
             onclick={() => store.addMonitorRow(connection.id)}
             disabled={connection.pollRunning}
           >+ Add row</button>
-          <button
-            type="button"
-            class="text-[11px] text-muted-foreground transition-colors hover:text-foreground"
-            onclick={() => savingProfileName = ''}
-            title="Save connection + register map as profile"
-          >Save as profile…</button>
+          <div class="flex items-center gap-2">
+            {#if linkedProfile}
+              <button
+                type="button"
+                class="text-[11px] text-primary/80 transition-colors hover:text-primary"
+                onclick={updateLinkedProfile}
+                title="Overwrite profile '{linkedProfile.name}' with current settings and register map"
+              >Update "{linkedProfile.name}"</button>
+              <span class="text-muted-foreground/40">·</span>
+            {/if}
+            <button
+              type="button"
+              class="text-[11px] text-muted-foreground transition-colors hover:text-foreground"
+              onclick={() => savingProfileName = ''}
+              title="Save connection + register map as a new profile"
+            >Save as profile…</button>
+          </div>
         </div>
       {/if}
     </div>

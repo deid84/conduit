@@ -53,9 +53,10 @@
         case 'udp':        config = { type: 'udp',        config: { ...udp       } }; break
       }
       await connect(config, modbusMode ?? undefined)
-      if (pendingMonitorRows.length > 0) {
-        const conn = store.connections.find(c => c.id === store.activeId)
-        if (conn) conn.monitorRows = [...pendingMonitorRows]
+      const conn = store.connections.find(c => c.id === store.activeId)
+      if (conn) {
+        if (selectedProfileId)          conn.sourceProfileId = selectedProfileId
+        if (pendingMonitorRows.length)  conn.monitorRows     = [...pendingMonitorRows]
         pendingMonitorRows = []
       }
     } catch (e) {
@@ -105,6 +106,11 @@
     const name = (savingName ?? '').trim()
     if (name) profileStore.add(name, currentConfig(), modbusMode)
     savingName = null
+  }
+
+  function updateProfile() {
+    if (!selectedProfileId) return
+    profileStore.update(selectedProfileId, { config: currentConfig(), modbusMode })
   }
 
   function deleteSelectedProfile() {
@@ -181,6 +187,13 @@
           disabled={!selectedProfileId}
           onclick={loadProfile}
         >Load</button>
+        {#if selectedProfileId}
+          <button
+            class="rounded border border-border px-2.5 py-1.5 text-[11px] text-foreground hover:bg-muted/40 transition-colors"
+            onclick={updateProfile}
+            title="Overwrite the selected profile with the current settings"
+          >Update</button>
+        {/if}
         <button
           class="rounded border border-border px-2.5 py-1.5 text-[11px] text-foreground hover:bg-muted/40 transition-colors"
           onclick={() => savingName = ''}
