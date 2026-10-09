@@ -2,10 +2,20 @@
 # Changelog
 
 All notable changes to Conduit.
-## [0.4.0] — 2026-07-13
+## [0.4.0] — 2026-10-09
+
+### Chore
+- Bump version to 0.4.0 and update CHANGELOG
+- **tauri**: Update generated ACL schemas
+- **deps**: Update Rust workspace dependencies
+
 
 ### Features
 - **profiles**: Add Update button for in-place profile editing
+- **tauri**: Add dialog and fs plugins for native file save
+- **profiles**: Export dialog with profile selection and save location
+- **profiles**: Add Update button for in-place profile editing
+
 
 ## [0.3.0] — 2026-07-09
 
