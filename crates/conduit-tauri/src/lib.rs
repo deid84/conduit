@@ -4,6 +4,8 @@ use conduit_api::{routes, state};
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_fs::init())
         .setup(|app| {
             // Bind on a random loopback port synchronously — this way we know
             // the port before constructing the WebView initialization script.
